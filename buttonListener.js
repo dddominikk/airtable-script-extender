@@ -1,8 +1,3 @@
-
-const devMode = true
-const devLog = x => devMode ? void(console.log(x)) : null
-const ordersTable = config.feed
-
 const menu0 = async => input.buttonsAsync('',['Menu'])
 const menu1 = async => input.buttonsAsync('',['Back'])
 
