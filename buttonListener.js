@@ -25,11 +25,13 @@ const requestNextMenu = async x => await screen[x].constructor()
 const nameLocation = x => screen[x].name
 
 console.log(nameLocation('Back'))
-let r = await screen.Back.constructor()
+let s = await screen.Back.constructor()
 
 while(true){
+
+
     output.clear()
-    console.log(nameLocation(r))
-    r = await requestNextMenu(r)
+    console.log(nameLocation(s))
+    s = await requestNextMenu(s)
 
 }
