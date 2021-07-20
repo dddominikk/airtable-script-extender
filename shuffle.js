@@ -2,7 +2,7 @@
  * x = array;           i = current index; 
  * t = temp value;      y =  random index;
  * The premise: pick any unshuffled element and swap it with the current head.
- * The implementation is as banal as lazy as they get, but Math.random delivers.
+ * The implementation is banal, but Math.random delivers.
  */
 
 const shuffle = x => {
