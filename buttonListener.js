@@ -18,7 +18,7 @@ let screen = {
                 return menu1()
             }
         }
-};
+}
 
 const requestNextMenu = async x => await screen[x].constructor()
 const nameLocation = x => screen[x].name
