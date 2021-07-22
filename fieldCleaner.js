@@ -8,7 +8,7 @@
 
 		let table = base.getTable('Slack Relay')
 
-		await deletDisNephew();
+		await deletDisNephew()
 
 		async function deletDisNephew(call){
 
@@ -24,15 +24,15 @@
 
              fields: ['Output','Word Count']
 
-             }).catch();
+             }).catch()
 
-             let oi;
+             let oi
 
              record === null ? (output.text('🤖 can\'t decide, eh? I understand, they\'re all too perfect for deletion.'))
 
          : oi = record.getCellValueAsString('Output')
 
-                .length;
+                .length
 
         let wc = record.getCellValue('Word Count')
 
@@ -42,7 +42,7 @@
 
         if(oi>0){
 
-            console.warn('Nothing to delete.');
+            console.warn('Nothing to delete.')
 
 
 
