@@ -1,6 +1,7 @@
 # Airtable Script Extender
 
-JavaScript is amazing. Project management less so. 
+JavaScript is amazing. 
+Project management less so. 
 Airtable's Scripting app allows us to cut through a lot of red tape in the form of npm-prefixed CLI commands.
 
 This repo aims to make the most that luxury.
