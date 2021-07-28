@@ -13,6 +13,10 @@ Some of the included scripts might already be licensed individually.
 You should be able to recognize them, but just to be sure: if a source code starts with a sizable block of text telling you it's a
 free software license - it's a free software license, I promise.
 
+## Modules
+
+- stateChange.js needs to be in a separate Scripting block as you can't have a single app respond to repeated input while it's still running
+
 ## Background
 
 The Block SDK has crashed and burned my Windows installation one too many times. 
