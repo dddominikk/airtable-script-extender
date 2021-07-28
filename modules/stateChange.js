@@ -6,9 +6,9 @@ IF(ready,"🟢","⚫")
 */
 
 let rec = { fields: {} },
-    FieldName = 'ready', //change this from 'ready' to the name of your checkbox field
+    FieldName = `ready`,//change this from 'ready' to the name of your checkbox field
     table = base.getTable(cursor.activeTableId),
-    record = await input.recordAsync('', table)
+    record = await input.recordAsync('', table)//this is just a proof-of-concept so it only works with manual input for now
         .then(
             record => {
                 rec.id = record.id,
