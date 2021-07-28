@@ -15,7 +15,8 @@ free software license - it's a free software license, I promise.
 
 ## Modules
 
-- stateChange.js needs to be in a separate Scripting block as you can't have a single app respond to repeated input while it's still running
+- stateChange.js needs to be in a separate Scripting block as you can't have a single one of those responding to repeated input from the (Air)table itself while it's still running
+    - well, with this little trick you can, got the idea from someone over at community.airtable.com
 
 ## Background
 
