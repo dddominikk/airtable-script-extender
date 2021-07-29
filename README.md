@@ -24,7 +24,7 @@ Key traits:
 - multiproblems
 
 - stateChange.js needs to be in a separate Scripting block as you can't have a single one of those responding to repeated input from the (Air)table itself while it's still running
-    - well, with this little trick you can, got the idea from someone over at community.airtable.com
+    - well, with [this little trick](https://github.com/dddominikk/airtable-script-extender/blob/main/modules/stateChange.js) you can, got the idea from someone over at community.airtable.com
 
 ## Background
 
