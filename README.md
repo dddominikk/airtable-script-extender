@@ -27,7 +27,7 @@ Key traits:
     - well, with [this little trick](https://github.com/dddominikk/airtable-script-extender/blob/main/modules/stateChange.js) you can
     - got the idea while lurking at community.airtable.com, someone specifically described this workaround for using table buttons as actual Scripting app controls, and not just      initializers
     - the promise/thenable-heavy implementation seemed fitting for such a straightforward functionality
-    - in reality, I might have actually overthinked this one, code review in progress
+    - in reality, I might have actually overthunk this one, code review in progress
      
 
 ## Background
