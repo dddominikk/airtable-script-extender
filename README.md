@@ -13,6 +13,11 @@ Some of the included scripts might already be licensed individually.
 You should be able to recognize them, but just to be sure: if a source code starts with a sizable block of text telling you it's a
 free software license - it's a free software license, I promise.
 
+## Scripts
+Key traits:
+- single-purpose
+- zero problems (at least until the fake news tries to ruin my reputation of history's first flawless code source/sorceror)
+
 ## Modules
 
 - stateChange.js needs to be in a separate Scripting block as you can't have a single one of those responding to repeated input from the (Air)table itself while it's still running
@@ -20,5 +25,6 @@ free software license - it's a free software license, I promise.
 
 ## Background
 
-The Block SDK has crashed and burned my Windows installation one too many times. 
-Also, I'm lazy, so I'm finding ways to extend the Scripting block from inside the app itself.
+The Block SDK has crashed and burned my Windows installation one too many times.
+
+Also, I'm lazy, so I'm finding ways to extend the Scripting block from inside the app itself. This feeling of entitlement has so far culminated in me writing a mini application state manager (React in React, basically, sans the 'wtfisthis' effect) that I'm gradually releasing into the public domain as time permits.
