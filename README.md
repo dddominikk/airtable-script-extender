@@ -24,7 +24,11 @@ Key traits:
 - multiproblems
 
 - stateChange.js needs to be in a separate Scripting block as you can't have a single one of those responding to repeated input from the (Air)table itself while it's still running
-    - well, with [this little trick](https://github.com/dddominikk/airtable-script-extender/blob/main/modules/stateChange.js) you can, got the idea from someone over at community.airtable.com
+    - well, with [this little trick](https://github.com/dddominikk/airtable-script-extender/blob/main/modules/stateChange.js) you can
+    - got the idea while lurking at community.airtable.com, someone specifically described this workaround for using table buttons as actual Scripting app controls, and not just      initializers
+    - the promise/thenable-heavy implementation seemed fitting for such a straightforward functionality
+    - in reality, I might have actually overthinked this one, code review in progress
+     
 
 ## Background
 
