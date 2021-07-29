@@ -16,7 +16,7 @@ free software license - it's a free software license, I promise.
 ## Scripts
 Key traits:
 - single-purpose
-- zero problems (at least until the fake news tries to ruin my reputation of history's first flawless code source/sorceror)
+- zero problems (so far 😅)
 
 ## Modules
 
