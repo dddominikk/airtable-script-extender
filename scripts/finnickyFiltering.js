@@ -105,7 +105,6 @@ const reportUpdate = (strings, ...notStrings) => {
 neededUpdating
     .forEach(
         (obj, i, self) => {
-
            self.length 
                && 
             i === 0 
