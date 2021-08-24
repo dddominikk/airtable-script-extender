@@ -35,4 +35,6 @@ async function boot(){
 
 Naturally, assign that line to a variable ('let someVar = await eval(...')
 if you want to be able to handle the data/continue coding from there.
+
+The code will fully load whatever calling record you activate via the Button field.
 */
