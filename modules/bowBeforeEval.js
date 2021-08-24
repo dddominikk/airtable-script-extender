@@ -26,8 +26,6 @@ async function boot(){
      */
             await eval(`(${base.getTable('Classes')?.description})`)()
    
-
-
     /*  That code up there? That goes into a table description field of your choice.
 
     usage: 
