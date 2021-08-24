@@ -22,6 +22,10 @@ Key traits:
 
 - multifaceted
 - multiproblems
+- mostly proof-of-concepts meant to either:
+  - intrigue newcomers to ECMAScript
+  - broaden the horizons of moderately proficient coders
+  - entertain veterans, hopefully including those who inspired most of these stunts
 
 - stateChange.js needs to be in a separate Scripting block as you can't have a single one of those responding to repeated input from the (Air)table itself while it's still running
     - well, with [this little trick](https://github.com/dddominikk/airtable-script-extender/blob/main/modules/stateChange.js) you can
