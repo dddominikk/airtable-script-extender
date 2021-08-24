@@ -1,4 +1,5 @@
 async function boot(){
+    
     const
         table = base.getTable(cursor.activeTableId),
         buttonField = input.recordAsync('', table),
@@ -6,14 +7,18 @@ async function boot(){
         idle = (ms) => new Promise(resolve => setTimeout(resolve, ms || 500, 'timeout')),
         raceWinner = await Promise.race([buttonField,idle()])
 
-output.inspect(raceWinner)
-if(raceWinner!=='timeout'){
+    output.inspect(raceWinner)
+    if(raceWinner!=='timeout'){
+    
     this.winnerMapped = {...raceWinner};
     table?.fields.flatMap(f=>f.name).forEach(
         fieldName=> winnerMapped[fieldName] = raceWinner.getCellValue(fieldName))
+    
+    this.outcome = {table,record:this.winnerMapped,promiseRaceWinner:raceWinner}
+    
     console.warn(this.winnerMapped)
-}
-return raceWinner
+    }
+    return this.outcome||raceWinner
 }
 
 /* usage: 
