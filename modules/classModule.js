@@ -19,3 +19,13 @@ class Module {
         })
     }
 }
+
+// Usage: top part goes into a table description,
+// the following into the Scripting block:
+
+const Module = eval(`(${base.tables[0].description})`)
+
+// Do the expensive table load once:
+await module.Cache()
+
+// Which overwrites the hacky getter function and turns it into a prop accessible via the dot notation
