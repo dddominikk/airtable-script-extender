@@ -8,7 +8,7 @@ class Module {
 		
 		return this.Cache = table
       .selectRecordsAsync( {fields} ) // an empty selectRecordsAsync call is showing up as deprecated as of this week, hence the greedy fields map
-			.then(data => this.Cache = data)
+			.then(data => this.Cache = data) // static class prop memoization
 	}
 
     constructor(module){
