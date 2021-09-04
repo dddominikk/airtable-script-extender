@@ -11,8 +11,6 @@ const
     show: () => output.inspect(Log.s)
     }
 
-
-
 const 
     
     allTables = base.tables.flatMap(table => table.name),
@@ -27,7 +25,6 @@ const
 
     allFields = (table) => base.getTable(table).fields.flatMap(field=>field.name)
 
-
 class Frame {
 
     constructor(config){
@@ -39,12 +36,10 @@ class Frame {
     }
 }
 
-
 await new Frame({
     render: tableNameMenu,
     callback: () => Log.s.push(allFields(Log.latest()))          
 })
-
 
 const 
     
