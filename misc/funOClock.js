@@ -18,38 +18,41 @@ async function chill (ms){
     if (x) { return 'done' }
 }
 
-// const toThree = x => x%1===0 ? 'log' : x%2===0? 'info' : x%3===0 ? 'warn' : x%4===0?'error':'dir'
+// const toThree = x => x%1 === 0 ? 'log' : x%2 === 0 ? 'info' : x%3 === 0 ? 'warn' : x%4 === 0 ? 'error' : 'dir'
 
 while(true){
 chill(1000)
-
 output.clear()
 // let ms = new Date(Date.now()).getMilliseconds()
-let ss = new Date(Date.now()).getSeconds()
-let mm = new Date(Date.now()).getMinutes()
-let hh = new Date(Date.now()).getHours()
-var n =0
-const addzero = x => x < 10 ? `0${x}` : `${x}`
-let temp = ``.repeat(2+Math.random()*arr.length*2)
- let ae = [temp.split('')]
+let 
+    ss = new Date(Date.now()).getSeconds(),
+    mm = new Date(Date.now()).getMinutes(),
+    hh = new Date(Date.now()).getHours(),
+    n =0
 
-let p
-var d= '❤'
+const addzero = x => x < 10 ? `0${x}` : `${x}`
+let 
+    temp = ``.repeat(2+Math.random()*arr.length*2),
+    ae = [temp.split('')],
+    d = '❤',
+    p
+
 switch(true){
     case (ss%2===0):
-    n = ss+1
-    break
+        n = ss+1
+        break
+        
     case (d==='❤'):
-      d = ''
-      break;
-      case (d===''):
-      d = '❤'
-      break
+        d = ''
+        break;
+    
+    case (d===''):
+        d = '❤'
+        break
 
-      default:
-    p = (p===true?false:true)
-    d = d.repeat(~~(Math.random()*100))
-
+    default:
+        p = (p===true?false:true)
+        d = d.repeat(~~(Math.random()*100))
 }
 
 
