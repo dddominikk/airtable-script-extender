@@ -18,6 +18,11 @@ Key traits:
 - single-purpose
 - zero problems (totally not jinxing it)
 
+#### loadEntireTable.js
+
+- fully load all records in a given table
+- the result includes mapped out cell values covering every field from the source
+
 ## Modules
 
 - multifaceted
