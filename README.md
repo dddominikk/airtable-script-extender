@@ -36,7 +36,7 @@ Key traits:
 
 #### [simpleDeduper.js](https://github.com/dddominikk/airtable-script-extender/blob/main/scripts/simpleDeduper.js)
 
-## Modules
+## [Modules](https://github.com/dddominikk/airtable-script-extender/tree/main/modules)
 
 - multifaceted
 - may not be entirely polished in all respects
