@@ -52,9 +52,13 @@ Key traits:
     - asynchronously
     - before reaching line two of the Scripting block
     - how's that for a strong start?
-#### [modulES6](https://github.com/dddominikk/airtable-script-extender/blob/main/modules/modulES6.js)
+
+#### [moduleImporter.js](https://github.com/dddominikk/airtable-script-extender/edit/main/modules/stateManager.js)
+  - the original module system prototype, or thereabout
+  - meant to be used alongside stateChange.js
+#### [modulES6.js](https://github.com/dddominikk/airtable-script-extender/blob/main/modules/modulES6.js)
   - an alternative module system leveraging Java-like class syntax from ES&
-#### [stateChange](https://github.com/dddominikk/airtable-script-extender/blob/main/modules/stateChange.js)
+#### [stateChange.js](https://github.com/dddominikk/airtable-script-extender/blob/main/modules/stateChange.js)
   - needs to be in a separate Scripting block as you can't have a single one of those responding to repeated input from the (Air)table itself while it's still running
     - well, with this little trick you can
     - got the idea while lurking at community.airtable.com
