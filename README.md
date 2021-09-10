@@ -45,7 +45,7 @@ Key traits:
   - broaden the horizons of moderately proficient coders
   - entertain veterans, hopefully including those who inspired most of these stunts
 
-#### (bowBeforeEval.js](https://github.com/dddominikk/airtable-script-extender/blob/main/modules/bowBeforeEval.js)
+#### [bowBeforeEval.js](https://github.com/dddominikk/airtable-script-extender/blob/main/modules/bowBeforeEval.js)
   - a proof-of-concept illustrating a technique for implementing
     - branching logic
     - potentially including user input
