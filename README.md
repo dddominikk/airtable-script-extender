@@ -18,7 +18,7 @@ Key traits:
 - single-purpose
 - zero problems (totally not jinxing it)
 
-#### finnickyFiltering.js
+#### [finnickyFiltering.js](https://github.com/dddominikk/airtable-script-extender/blob/main/scripts/finnickyFiltering.js)
 
 - written on request, a straightforward method of keeping tabs on the latest record in a given table
 - regardless of how you define "latest"
@@ -27,10 +27,14 @@ Key traits:
 
 - a prototype demonstrating one particular approach to building out more complex and nuanced user interfaces within the constraints of the Scripting app environment
 
-#### loadEntireTable.js
+#### [loadEntireTable.js](https://github.com/dddominikk/airtable-script-extender/blob/main/scripts/loadEntireTable.js)
 
 - fully load all records in a given table
 - the result includes mapped out cell values covering every field from the source
+
+#### [fieldCleaner.js](https://github.com/dddominikk/airtable-script-extender/blob/main/scripts/fieldCleaner.js)
+
+#### [simpleDeduper.js](https://github.com/dddominikk/airtable-script-extender/blob/main/scripts/simpleDeduper.js)
 
 ## Modules
 
