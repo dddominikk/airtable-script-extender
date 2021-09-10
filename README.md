@@ -25,7 +25,8 @@ Key traits:
 
 #### [textMarker.js](https://github.com/dddominikk/airtable-script-extender/blob/main/scripts/textMarker.js)
 
-- a prototype demonstrating one particular approach to building out more complex and nuanced user interfaces within the constraints of the Scripting app environment
+- a prototypal approach to building out more complex, nuanced user interfaces 
+- relative to what you're used to due to the constraints of the Scripting app environment
 
 #### [loadEntireTable.js](https://github.com/dddominikk/airtable-script-extender/blob/main/scripts/loadEntireTable.js)
 
