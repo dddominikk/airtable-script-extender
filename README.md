@@ -61,6 +61,15 @@ Key traits:
     - someone specifically described this workaround for using table buttons as actual Scripting app controls, and not just initializers
     - the promise/thenable-heavy implementation seemed fitting for such a straightforward functionality
     - in reality, I might have actually overthunk this one, code review in progress
+   
+ ## Misc
+  - playful experiments mostly intended as distractions
+  - their mission doesn's stretch beyond making you go "aww, neat" or "ooh, really"
+
+#### [classDie.js](https://github.com/dddominikk/airtable-script-extender/blob/main/misc/classDie.js)
+  - fully animated digital die factory using the ES6 class syntax
+#### [funOClock.js](https://github.com/dddominikk/airtable-script-extender/blob/main/misc/funOClock.js)
+  - a charmingly unpredictable digital clock
      
 ## Background
 
