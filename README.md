@@ -69,15 +69,13 @@ Key traits:
    
  ## Misc
   - playful experiments mostly intended as distractions
-  - their mission doesn's stretch beyond making you go "aww, neat" or "ooh, really"
-
+  - their purpose doesn's stretch far beyond making you go "aww, neat" or "ooh, really?"
 #### [classDie.js](https://github.com/dddominikk/airtable-script-extender/blob/main/misc/classDie.js)
   - fully animated digital die factory using the ES6 class syntax
 #### [funOClock.js](https://github.com/dddominikk/airtable-script-extender/blob/main/misc/funOClock.js)
   - a charmingly unpredictable digital clock
      
 ## Background
-
 The Block SDK has crashed and burned my Windows installation one too many times.
 
 Also, I'm lazy, so I'm finding ways to extend the Scripting block from inside the app itself. This feeling of entitlement has so far culminated in me writing a mini application state manager (React in React, basically, sans the 'wtfisthis' effect) that I'm gradually releasing into the public domain as time permits.
