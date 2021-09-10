@@ -23,6 +23,10 @@ Key traits:
 - written on request, a straightforward method of keeping tabs on the latest record in a given table
 - regardless of how you define "latest"
 
+#### [textMarker](https://github.com/dddominikk/airtable-script-extender/blob/main/scripts/textMarker.js)
+
+- a prototype demonstrating one particular approach to building out more complex and nuanced user interfaces within the constraints of the Scripting app environment
+
 #### loadEntireTable.js
 
 - fully load all records in a given table
