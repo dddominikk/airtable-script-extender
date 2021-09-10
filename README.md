@@ -16,12 +16,12 @@ free software license - it's a free software license, I promise.
 ## Scripts
 Key traits:
 - single-purpose
-- zero problems (so far 😅)
+- zero problems (totally not jinxing it)
 
 ## Modules
 
 - multifaceted
-- multiproblems
+- may not be entirely polished in all respects
 - mostly proof-of-concepts meant to either:
   - intrigue newcomers to ECMAScript
   - broaden the horizons of moderately proficient coders
