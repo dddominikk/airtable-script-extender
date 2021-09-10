@@ -45,6 +45,14 @@ Key traits:
   - broaden the horizons of moderately proficient coders
   - entertain veterans, hopefully including those who inspired most of these stunts
 
+#### (bowBeforeEval.js](https://github.com/dddominikk/airtable-script-extender/blob/main/modules/bowBeforeEval.js)
+  - a proof-of-concept illustrating a technique for implementing
+    - branching logic
+    - potentially including user input
+    - asynchronously
+    - before reaching line two of the Scripting block
+    - how's that for a strong start?
+    
 - stateChange.js needs to be in a separate Scripting block as you can't have a single one of those responding to repeated input from the (Air)table itself while it's still running
     - well, with [this little trick](https://github.com/dddominikk/airtable-script-extender/blob/main/modules/stateChange.js) you can
     - got the idea while lurking at community.airtable.com, someone specifically described this workaround for using table buttons as actual Scripting app controls, and not just      initializers
