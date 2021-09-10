@@ -54,14 +54,14 @@ Key traits:
     - how's that for a strong start?
 #### [modulES6](https://github.com/dddominikk/airtable-script-extender/blob/main/modules/modulES6.js)
   - an alternative module system leveraging Java-like class syntax from ES&
-  - 
-- stateChange.js needs to be in a separate Scripting block as you can't have a single one of those responding to repeated input from the (Air)table itself while it's still running
-    - well, with [this little trick](https://github.com/dddominikk/airtable-script-extender/blob/main/modules/stateChange.js) you can
-    - got the idea while lurking at community.airtable.com, someone specifically described this workaround for using table buttons as actual Scripting app controls, and not just      initializers
+#### [stateChange](https://github.com/dddominikk/airtable-script-extender/blob/main/modules/stateChange.js)
+  - needs to be in a separate Scripting block as you can't have a single one of those responding to repeated input from the (Air)table itself while it's still running
+    - well, with this little trick you can
+    - got the idea while lurking at community.airtable.com
+    - someone specifically described this workaround for using table buttons as actual Scripting app controls, and not just initializers
     - the promise/thenable-heavy implementation seemed fitting for such a straightforward functionality
     - in reality, I might have actually overthunk this one, code review in progress
      
-
 ## Background
 
 The Block SDK has crashed and burned my Windows installation one too many times.
