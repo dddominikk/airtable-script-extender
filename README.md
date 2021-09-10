@@ -18,6 +18,11 @@ Key traits:
 - single-purpose
 - zero problems (totally not jinxing it)
 
+#### finnickyFiltering.js
+
+- written on request, a straightforward method of keeping tabs on the latest record in a given table
+- regardless of how you define "latest"
+
 #### loadEntireTable.js
 
 - fully load all records in a given table
