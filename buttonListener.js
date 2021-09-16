@@ -1,8 +1,7 @@
-const menu0 = async => input.buttonsAsync('',['Menu'])
-const menu1 = async => input.buttonsAsync('',['Back'])
+const menu0 = () => input.buttonsAsync('',['Menu'])
+const menu1 = () => input.buttonsAsync('',['Back'])
 
-
-let screen = {
+const screen = {
 
         Back:{
          name: 'mainMenu',
@@ -20,7 +19,6 @@ let screen = {
         }
 }
 
-const requestNextMenu = async x => await screen[x].constructor()
 const nameLocation = x => screen[x].name
 
 console.log(nameLocation('Back'))
