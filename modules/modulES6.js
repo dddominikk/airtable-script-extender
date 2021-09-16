@@ -30,4 +30,4 @@ class module {
 
 //usage example, assuming there's a module named 'Random' in the connected database
 
-let Random = new module('Random')
+const Random = new module('Random')
