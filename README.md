@@ -6,9 +6,11 @@ Project management less so.
 
 Airtable's Scripting app allows us to cut through a lot of red tape in the form of npm-prefixed CLI commands.
 
-This repo aims to make the most that luxury.
+This repo aimed to make the most that luxury. It's also what led to the creation of [Modulartable/Mable](https://app.gumroad.com/attentionspa), some year or so later.
 
-Ping me if you need or want to use any particular component (file) commercially and I'll give you a written permission within a day or two.
+Every airtable-script-extender module was transitioned to the main Mable repository and continues being supported. And besides Finnicky Filtering, each and every one has been signifivantly improved since that time. Some of those -- and others -- are also available [via Airtable Universe](https://www.airtable.com/universe/expyg6OoteY3U8LM4/modular-scripting). But the main repository is the aforementioned Gumroad release.
+
+Same licensing and condition applies. contPing me if you need/want to use any particular component (file) commercially and I'll give you a written permission within a day or two.
 Some of the included scripts might already be licensed individually.
 You should be able to recognize them, but just to be sure: if a source code starts with a sizable block of text telling you it's a
 free software license - it's a free software license, I promise.
