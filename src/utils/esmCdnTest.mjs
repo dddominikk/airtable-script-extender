@@ -20,5 +20,7 @@ export async function splitArrayWithDelay(arr){
   return {halves, midwayPoint,arr};
 };
 
+export {arrayToChunks as chunk, wait as sleep }
+
+
 export default splitArrayWithDelay;
-export const importedUtils = {arrayToChunks: chunk, wait: sleep };
