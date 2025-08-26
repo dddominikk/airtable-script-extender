@@ -1,3 +1,4 @@
+/** Just testing to confirm JSDelivr can serve fragmented GH packages of this sort. */
 import {arrayToChunks} from './arrayToChunks.mjs';
 import {wait} from './wait.mjs';
 
