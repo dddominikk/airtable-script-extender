@@ -6,30 +6,19 @@ const testLog = [
   {
     message: `Beginning dynamic CDN GH import test using JSDelivr.`,
     timestamp: performance.now(),
-    data: {
-      mockupArray
-    }
+    data: {mockupArray}
   }
 ];
 
 const result = await splitArrayWithDelay(mockupArray);
 
 testLog.push({
+  message: `Split a ${mockupArray.length}-item array with a delay.`,
   timestamp: performance.now(),
   get runtime(){
-    
-    const value = this.timestamp - testLog[0].timestamp;
-    
-    Object.defineProperty(this, 'runtime', { value, enumerable: true });
-    
-    return value;
-
+    return this.runtime = this.timestamp - testLog[0].timestamp;
   },
-  data: {
-    result
-  },
-  message: `Split a ${mockupArray.length}-item array with a delay.` 
+  data: {result},
 });
-
 
 export default {testLog, splitArrayWithDelay, meta: import.meta};
