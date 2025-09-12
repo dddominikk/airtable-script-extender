@@ -17,8 +17,13 @@ const result = await splitArrayWithDelay(mockupArray);
 testLog.push({
   timestamp: performance.now(),
   get runtime(){
-    delete this.runtime;
-    return this.timestamp - testLog[0].timestamp;
+    
+    const value = this.timestamp - testLog[0].timestamp;
+    
+    Object.defineProperty(this, 'runtime', { value, enumerable: true });
+    
+    return value;
+
   },
   data: {
     result
