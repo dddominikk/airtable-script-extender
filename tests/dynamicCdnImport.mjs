@@ -16,6 +16,7 @@ testLog.push({
   message: `Split a ${mockupArray.length}-item array with a delay.`,
   timestamp: performance.now(),
   get runtime(){
+    delete this.runtime;
     return this.runtime = this.timestamp - testLog[0].timestamp;
   },
   data: {result},
