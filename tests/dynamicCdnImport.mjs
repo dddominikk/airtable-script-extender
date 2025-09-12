@@ -18,7 +18,7 @@ testLog.push({
   timestamp: performance.now(),
   get runtime(){
     delete this.runtime;
-    return this.timestamp - log[0].timestamp;
+    return this.timestamp - testLog[0].timestamp;
   },
   data: {
     result
