@@ -39,6 +39,22 @@ Key traits:
 
 #### [simpleDeduper.js](https://github.com/dddominikk/airtable-script-extender/blob/main/scripts/simpleDeduper.js)
 
+## Tests
+
+### Dynamic CDN Import
+
+Example run, environment-agnostic:
+```js
+const test = await import('https://cdn.jsdelivr.net/gh/dddominikk/airtable-script-extender@c5c1a55ffacec12d1111bf0ddd6cff64516ccb4c/tests/dynamicCdnImport.mjs');
+console.log(test);
+```
+<details>
+  <summary>Result</summary>
+  
+  ![dynamicCdnImportExampleResult](https://github.com/user-attachments/assets/a44f851e-eb03-4af0-9dfb-10dd7c56fa8a)
+</details>
+
+
 ## [Modules](https://github.com/dddominikk/airtable-script-extender/tree/main/modules)
 
 - multifaceted
