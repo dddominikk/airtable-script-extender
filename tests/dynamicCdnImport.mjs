@@ -14,8 +14,11 @@ const result = await splitArrayWithDelay(mockupArray);
 
 testLog.push({
   message: `Split a ${mockupArray.length}-item array with a delay.`,
-  timestamp: performance.now(),
-  get runtime(){ return this.timestamp - testLog[0].timestamp; },
+  ...(()=>{
+    const timestamp = performance.now();
+    const runtime = timestamp - testLog[0].timestamp;
+    return {timestamp, runtime};
+  })(),
   data: {result},
 });
 
