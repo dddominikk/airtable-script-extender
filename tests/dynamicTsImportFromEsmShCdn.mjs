@@ -3,7 +3,7 @@ const { writeUrl } = await import(`https://esm.sh/gh/dddominikk/airtable-script-
 const writeUrlTests = [
   { sort: 'score', order: 'asc' },
   { sort: 'id', order: 'desc', skip: 500 }
-].map(ops => writeUrl('https://api.opencritic.com/api/game', ops);
+].map(ops => writeUrl('https://api.opencritic.com/api/game', ops));
 
 const testResult = {
   message: `Successfully imported a Typescript module from a public GitHNub repo.`,
