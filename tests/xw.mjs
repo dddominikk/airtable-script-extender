@@ -104,6 +104,14 @@ async function validateXboxWireXmlFeedPage(pageNumber = 1, fetchMethod, endpoint
 };
 
 
+/**
+* @example importing and using this file from an Airtable scripting extension, while overriding the node-fetch-native import
+```
+const complexGhImport = await import(`https://esm.sh/gh/dddominikk/airtable-script-extender@d0e508b/tests/xw.mjs`)
+const complexTestRun = await complexGhImport.findLastFeedPage({ minPage: 1900, maxPage: 3000, fetchMethod: remoteFetchAsync });
+console.info({ complexGhImport, complexTestRun })
+```
+*/
 
 /**
  * 
@@ -115,4 +123,3 @@ async function validateXboxWireXmlFeedPage(pageNumber = 1, fetchMethod, endpoint
     }
 ```
 */
-
