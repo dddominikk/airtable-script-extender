@@ -1,7 +1,12 @@
-const {fetch: fetchMethod} = await import('https://esm.sh/node-fetch-native@1.6.7?standalone');
+const {fetch: fetchMethod} = await import('https://esm.sh/node-fetch-native@1.6.7?standalone&dev');
 const { XMLParser } = await import('https://esm.sh/fast-xml-parser@4.3.2');
 
 const validate = (pageNumber, fetchMethod) => validateXboxWireXmlFeedPage.call({ FastXml: new XMLParser }, pageNumber, fetchMethod);
+
+export {
+    findLastValidXboxWireXmlFeedPageViaBinarySearch as findLastFeedPage,
+    validate as validateFeedPage,
+};
 
 async function findLastValidXboxWireXmlFeedPageViaBinarySearch({ minPage = 1, maxPage, validatePage = validate, fetchMethod }) {
 
@@ -98,12 +103,7 @@ async function validateXboxWireXmlFeedPage(pageNumber = 1, fetchMethod, endpoint
 
 };
 
-export {
-    findLastValidXboxWireXmlFeedPageViaBinarySearch as findLastFeedPage,
-    validate as validateFeedPage,
-};
 
-export const meta = import.meta;
 
 /**
  * 
