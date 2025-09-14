@@ -1,4 +1,4 @@
-const { fetch: fetchMethod } = await import('https://esm.sh/node-fetch-native@1.6.7?standalone&dev');
+const {fetch: fetchMethod} = await import('https://esm.sh/node-fetch-native@1.6.7?standalone');
 const { XMLParser } = await import('https://esm.sh/fast-xml-parser@4.3.2');
 
 const validate = (pageNumber, fetchMethod) => validateXboxWireXmlFeedPage.call({ FastXml: new XMLParser }, pageNumber, fetchMethod);
