@@ -2,7 +2,7 @@ export type UrlParamSchema = Record<string, string | number | boolean | (string 
 
 export function writeUrl(path: string, params: UrlParamSchema, defaultParams?: UrlParamSchema) {
 
-    const baseParams = Object.assign({}, defaultParams || { sort: 'id', order: 'desc', skip: 0 });
+    const baseParams = Object.assign({}, defaultParams || {} );
 
     const mergedParams = Object.assign(baseParams, params || {});
 
@@ -23,3 +23,5 @@ export function writeUrl(path: string, params: UrlParamSchema, defaultParams?: U
 
     return urlObj.toString();
 };
+
+export type DefaultOcParams = { sort: 'id', order: 'desc', skip: 0 } as const;
