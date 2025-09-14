@@ -24,4 +24,4 @@ export function writeUrl(path: string, params: UrlParamSchema, defaultParams?: U
     return urlObj.toString();
 };
 
-export type DefaultOcParams = { sort: 'id', order: 'desc', skip: 0 } as const;
+export type DefaultOcParams = { sort: 'id', order: 'desc', skip: 0 };
