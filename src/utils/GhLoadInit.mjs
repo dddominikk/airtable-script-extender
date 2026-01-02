@@ -1,14 +1,17 @@
-export {GhLoadInit};
-
 /**
- * @typedef GhLoadInit
- * @prop {`ghp_${string}`} GhLoadInitConfig.auth - GitHub Auth token.
- * @prop {`${string}/${string}`} GhLoadInitConfig.repoPath - Relative GitHub repository path.
- * @prop {string} [GhLoadInitConfig.branch='main'] - GitHub repository branch name (defaults to 'main').
+ * @typedef GhlConfig
+ * @prop {`ghp_${string}`} auth - GitHub Auth token.
+ * @prop {`${string}/${string}`} repoPath - Relative GitHub repository path.
+ * @prop {string} [branch='main'] - GitHub repository branch name (defaults to 'main').
  **/
 
-/**@arg {GhLoadInit} config */
-async function GhLoadInit(config) {
+/** 
+ * @example one-liner
+ * ```js
+ * const { GhLoadInit } = await import('https://esm.sh/gh/dddominikk/airtable-script-extender/src/utils/GhLoadInit.mjs');
+ * ```
+ */
+export async function GhLoadInit(/**@type GhlConfig*/ config) {
   
         class GhEsModule {
             /** @ts-ignore */
