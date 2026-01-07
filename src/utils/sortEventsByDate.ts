@@ -1,18 +1,10 @@
+import {goToPath as resolvePath} from './goToPath.ts';
+
 export function sortEventsByDate(events: Record<string, unknown>, datePath: string|string[], order = 'asc') {
 
     if (!Array.isArray(events)) return [];
 
     const thisOrder = { asc: 'asc', desc: 'desc' }?.[order.toLowerCase()] ?? 'asc'
-
-    const resolvePath = (obj, path) =>
-        obj === null ? undefined : (Array.isArray(path)
-            ? path
-            : typeof path === 'string'
-                ? [path]
-                : []).reduce((acc, key) => {
-                    if (acc == null) return undefined;
-                    return acc[key];
-                }, obj);
 
     const direction = thisOrder === 'desc' ? -1 : 1;
 
