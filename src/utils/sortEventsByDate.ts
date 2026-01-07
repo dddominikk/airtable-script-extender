@@ -1,4 +1,4 @@
-import {goToPath as resolvePaths} from './goToPath.ts';
+import {goToPath} from './goToPath.ts';
 
 export function sortEventsByDate(events: Record<string, unknown>, datePath: string|string[], order = 'asc') {
 
