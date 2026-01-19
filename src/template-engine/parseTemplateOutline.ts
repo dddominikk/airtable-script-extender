@@ -1,30 +1,22 @@
-
 /**
  * templateOutline.mjs (vanilla JS, ESM)
  * -----------------------------------
- * Adds writeAll(args): returns EVERY possible permutation across ALL expanded templates.
+ * Compatible with:
+ *  - ${Subject} / ${AllTiers.length} (literal key OR path fallback)
+ *  - {a|b|c} / {x}? / nested braces
+ *  - Inline binder: #arg1{start|begin} playing
+ *  - Binder ref: {#arg1.1} (toggle)
+ *  - Double-curly blocks:
+ *      - Glue: {{ ... }}  (renders inner without injected spaces)
+ *      - Map lookup: {{start:beginning,begin:starting}[#arg1]}}
+ *        Values may include full nested template syntax.
  *
- * Notes / constraints:
- *  - Optionals {x}? expand to: omitted OR included.
- *  - Choices {a|b} expand to all options.
- *  - Binder {#v{start|begin} playing|play}:
- *      - Expands to BOTH:
- *          - "start playing" + correlated glue uses toggled "begin" -> "beginning"
- *          - "begin playing" + correlated glue uses toggled "start" -> "starting"
- *      - And also expands to the non-binder alternative "play" if present in a choice group.
- *  - Glue {{ ... } (single closing brace) expands by concatenating inner expansions.
- *    Special-case {{#v.1}ing} is handled to match your start/begin pairing.
- *
- * Whitespace policy (as requested):
- *  - Every ${...} insertion is wrapped as "  value  "
+ * Output policy:
+ *  - Every ${...} insertion is "  value  "
  *  - Final output collapses whitespace with /\s+/g => " " and trims.
- *
- * Dotted variables:
- *  - First literal lookup: args["AllTiers.length"]
- *  - Else path lookup: args["AllTiers"]?.["length"] (supports deeper paths)
  */
 
- export function parseTemplateOutline(outlineText, { rng = Math.random } = {}) {
+export function parseTemplateOutline(outlineText: string, { rng = Math.random } = {}) {
   const root = parseOutline(outlineText);
   const templateStrings = expandOutline(root);
 
@@ -54,26 +46,23 @@
 
   function write(argValues = {}) {
     const chosen = pickWeighted();
-    const ctx = {
-      rng,
-      args: argValues,
-      binds: Object.create(null),
-    };
-    const raw = render(chosen.ast, ctx);
-    return normalizeWhitespace(raw);
+    const ctx = { rng, args: argValues, binds: Object.create(null) };
+    return normalizeWhitespace(render(chosen.ast, ctx));
   }
 
   function writeAll(argValues = {}) {
     const all = [];
-    for (const t of compiled) {
-      all.push(...expandAll(t.ast, { args: argValues }));
-    }
-    // Normalize + de-dupe (in case different paths converge)
-    const normed = all.map(normalizeWhitespace).filter((x) => x.length > 0);
-    return uniq(normed);
+    for (const t of compiled) all.push(...expandAll(t.ast, { args: argValues }));
+    // Return all UNIQUE normalized outputs (typical desired behavior)
+    const set = new Set(all.map(normalizeWhitespace).filter(Boolean));
+    return Array.from(set);
   }
 
-  return { args, variance, write, writeAll };
+  function varianceUnique(argValues = {}) {
+    return writeAll(argValues).length;
+  }
+
+  return { args, variance, varianceUnique, write, writeAll };
 }
 
 /* =========================
@@ -86,6 +75,19 @@ function parseOutline(text) {
     .map((l) => l.replace(/\t/g, "  "))
     .filter((l) => l.trim().length);
 
+  // If input is NOT a bullet outline (as in your recent plain text example),
+  // treat each non-empty line as a leaf template under a dummy group.
+  const hasBullets = lines.some((l) => /^\s*-\s+/.test(l));
+  if (!hasBullets) {
+    return {
+      text: "",
+      level: -1,
+      children: [
+        { text: "__GROUP__", level: 0, children: lines.map((t) => ({ text: t.trim(), level: 1, children: [] })) },
+      ],
+    };
+  }
+
   const root = { text: "", level: -1, children: [] };
   const stack = [root];
 
@@ -95,7 +97,6 @@ function parseOutline(text) {
 
     const indent = m[1].length;
     const level = inferIndentLevel(indent);
-
     const node = { text: m[2].trim(), level, children: [] };
 
     while (stack.length && stack[stack.length - 1].level >= level) stack.pop();
@@ -136,6 +137,7 @@ function expandFrom(node, { emitSelf }) {
       results.push(joinPieces(self, stripBackticks(c)));
     }
   }
+
   return results;
 }
 
@@ -163,8 +165,18 @@ function uniq(arr) {
 }
 
 /* =========================
- * Template parsing (AST)
- * ========================= */
+ * Template AST
+ * =========================
+ * Node types:
+ *  - text:      { t:"text", v:string }
+ *  - arg:       { t:"arg", k:string }
+ *  - choice:    { t:"choice", opts: Node[][] }
+ *  - opt:       { t:"opt", inner: Node[] }
+ *  - bind:      { t:"bind", key:string, opts:string[] }
+ *  - bindRef:   { t:"bindRef", key:string, mode:"chosen"|"other" }
+ *  - glue:      { t:"glue", inner: Node[] }
+ *  - mapLookup: { t:"mapLookup", map: Record<string, Node[]>, refKey: string } // refKey is binder name
+ */
 
 function parseTemplate(input) {
   const s = String(input ?? "");
@@ -180,9 +192,9 @@ function parseSeq(s, start, until) {
   while (i < s.length) {
     if (until && s[i] === until) break;
 
-    // Glue: {{ ... }   (single closing brace)
+    // Double-curly block: {{ ... }}
     if (s[i] === "{" && s[i + 1] === "{") {
-      const { node, nextI } = parseGlueBalanced(s, i);
+      const { node, nextI } = parseDoubleCurly(s, i);
       nodes.push(node);
       i = nextI;
       continue;
@@ -197,6 +209,16 @@ function parseSeq(s, start, until) {
       continue;
     }
 
+    // Inline binder: #arg1{start|begin} ...
+    if (s[i] === "#") {
+      const maybe = tryParseInlineBind(s, i);
+      if (maybe) {
+        nodes.push(...maybe.nodes);
+        i = maybe.nextI;
+        continue;
+      }
+    }
+
     // Group: { ... } with optional '?'
     if (s[i] === "{") {
       const { node, nextI } = parseBraceGroup(s, i);
@@ -206,7 +228,7 @@ function parseSeq(s, start, until) {
     }
 
     // Text chunk
-    const next = nextIndexOfAny(s, i, until ? ["{", "$", until] : ["{", "$"]);
+    const next = nextIndexOfAny(s, i, until ? ["{", "$", "#", until] : ["{", "$", "#"]);
     const end = next === -1 ? s.length : next;
     nodes.push({ t: "text", v: s.slice(i, end) });
     i = end;
@@ -215,22 +237,168 @@ function parseSeq(s, start, until) {
   return { nodes, i };
 }
 
-function parseGlueBalanced(s, openIdx) {
-  let i = openIdx + 2; // after '{{'
+/**
+ * Parses {{ ... }}.
+ * If content matches: <map>[#ref] (with nesting), returns mapLookup.
+ * Otherwise returns glue(innerTemplateAst).
+ */
+function parseDoubleCurly(s, openIdx) {
+  const close = findDoubleCurlyClose(s, openIdx + 2);
+  if (close === -1) throw new Error(`Unclosed {{...}} at index ${openIdx}`);
+
+  const innerRaw = s.slice(openIdx + 2, close);
+  const trimmed = innerRaw.trim();
+
+  // Try map lookup form:  <mapText>[#refKey]  (refKey must be binder name)
+  const lookup = parseMapLookupSyntax(trimmed);
+  if (lookup) {
+    return { node: lookup, nextI: close + 2 };
+  }
+
+  // Otherwise: glue
+  const inner = parseTemplate(innerRaw);
+  return { node: { t: "glue", inner }, nextI: close + 2 };
+}
+
+function findDoubleCurlyClose(s, fromIdx) {
+  // We need to find the first "}}" that is not inside nested "{{ ... }}".
+  // Track depth of nested double curlies.
   let depth = 0;
-  for (; i < s.length; i++) {
-    const ch = s[i];
-    if (ch === "{") depth++;
-    else if (ch === "}") {
-      if (depth === 0) {
-        const innerRaw = s.slice(openIdx + 2, i);
-        const inner = parseTemplate(innerRaw);
-        return { node: { t: "glue", inner }, nextI: i + 1 };
-      }
+  for (let i = fromIdx; i < s.length - 1; i++) {
+    if (s[i] === "{" && s[i + 1] === "{") {
+      depth++;
+      i++;
+      continue;
+    }
+    if (s[i] === "}" && s[i + 1] === "}") {
+      if (depth === 0) return i;
       depth--;
+      i++;
+      continue;
     }
   }
-  throw new Error(`Unclosed {{...} at index ${openIdx}`);
+  return -1;
+}
+
+function parseMapLookupSyntax(text) {
+  // Expected: "<pairs>[#name]"
+  // where pairs: "k:v,k2:v2" with commas at top-level, and values can contain nested syntax.
+  // We locate the final [#name] suffix first (top-level).
+  const suffix = findLookupSuffix(text);
+  if (!suffix) return null;
+
+  const { mapText, refKey } = suffix;
+  const map = parseMapPairs(mapText);
+  if (!map) return null;
+
+  return { t: "mapLookup", map, refKey };
+}
+
+function findLookupSuffix(text) {
+  // Find a trailing [#name] at top-level (not inside braces/doublecurlies).
+  // Scan from end.
+  let depthBrace = 0;
+  let depthDC = 0;
+  for (let i = text.length - 1; i >= 0; i--) {
+    const ch = text[i];
+    const prev = text[i - 1];
+
+    if (prev === "}" && ch === "}") { depthDC++; i--; continue; }
+    if (prev === "{" && ch === "{") { depthDC = Math.max(0, depthDC - 1); i--; continue; }
+    if (depthDC > 0) continue;
+
+    if (ch === "}") depthBrace++;
+    else if (ch === "{") depthBrace = Math.max(0, depthBrace - 1);
+    if (depthBrace > 0) continue;
+
+    if (ch === "]") {
+      // find matching '['
+      const j = text.lastIndexOf("[", i);
+      if (j === -1) return null;
+      const inside = text.slice(j + 1, i).trim(); // e.g. "#arg1"
+      const m = inside.match(/^#([A-Za-z_]\w*)$/);
+      if (!m) return null;
+
+      const mapText = text.slice(0, j).trim();
+      return { mapText, refKey: m[1] };
+    }
+  }
+  return null;
+}
+
+function parseMapPairs(mapText) {
+  if (!mapText) return null;
+  const parts = splitTopLevelMixed(mapText, ",");
+  const map = Object.create(null);
+
+  for (const p of parts) {
+    const idx = indexOfTopLevelColon(p);
+    if (idx === -1) return null;
+    const k = p.slice(0, idx).trim();
+    const v = p.slice(idx + 1).trim();
+    if (!k) return null;
+    // Values are full templates (nesting supported)
+    map[k] = parseTemplate(v);
+  }
+  return map;
+}
+
+function indexOfTopLevelColon(s) {
+  let depthBrace = 0;
+  let depthDC = 0;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    const next = s[i + 1];
+
+    if (ch === "{" && next === "{") { depthDC++; i++; continue; }
+    if (ch === "}" && next === "}") { depthDC = Math.max(0, depthDC - 1); i++; continue; }
+    if (depthDC > 0) continue;
+
+    if (ch === "{") depthBrace++;
+    else if (ch === "}") depthBrace = Math.max(0, depthBrace - 1);
+    if (depthBrace > 0) continue;
+
+    if (ch === ":") return i;
+  }
+  return -1;
+}
+
+/**
+ * Inline binder token: #name{a|b} <tail?>
+ * Returns a bind node + optional tail text node(s).
+ */
+function tryParseInlineBind(s, i) {
+  const m = s.slice(i).match(/^#([A-Za-z_]\w*)\s*\{/);
+  if (!m) return null;
+
+  const key = m[1];
+  const braceIdx = i + m[0].lastIndexOf("{");
+  const bal = extractBalanced(s, braceIdx);
+  const optsRaw = bal.content;
+  const opts = splitTopLevel(optsRaw, "|").map((x) => x.trim()).filter(Boolean);
+
+  // After the closing brace, we do NOT consume arbitrary tail here; the surrounding parseSeq will continue.
+  // But many authors write "#x{a|b} playing" with a literal space and word after.
+  // We allow a single immediate space+word chunk to be captured as text so the bind emits "start" then " playing".
+  const after = bal.endIdx + 1;
+  let nextI = after;
+
+  // Capture immediate whitespace + non-special text until next special char as a single text node,
+  // only if the next char is whitespace (common for "#x{a|b} playing").
+  const nodes = [{ t: "bind", key, opts }];
+
+  if (s[nextI] && /\s/.test(s[nextI])) {
+    const nextSpecial = nextIndexOfAny(s, nextI, ["{", "$", "#"]);
+    const end = nextSpecial === -1 ? s.length : nextSpecial;
+    const chunk = s.slice(nextI, end);
+    // Only capture if it has some non-whitespace (so we don't eat spacing that caller expects)
+    if (/\S/.test(chunk)) {
+      nodes.push({ t: "text", v: chunk });
+      nextI = end;
+    }
+  }
+
+  return { nodes, nextI };
 }
 
 function parseBraceGroup(s, openIdx) {
@@ -252,34 +420,15 @@ function parseBraceGroup(s, openIdx) {
     return { node: isOptional ? { t: "opt", inner: [node] } : node, nextI };
   }
 
-  // Binder: {#v{start|begin} playing|play}
-  const bindHeader = innerTrim.match(/^#(\w+)\s*\{/);
-  if (bindHeader) {
-    const key = bindHeader[1];
-    const bracePos = innerTrim.indexOf("{", bindHeader[0].length - 1);
-    const innerBal = extractBalanced(innerTrim, bracePos);
-    const optsRaw = innerBal.content; // "start|begin"
-    const opts = splitTopLevel(optsRaw, "|").map((x) => x.trim()).filter(Boolean);
-
-    const tail = innerTrim.slice(innerBal.endIdx + 1).trimStart(); // e.g. "playing"
-    const bindNode = { t: "bind", key, opts };
-    const tailNodes = tail ? [{ t: "text", v: tail }] : [];
-
-    const composite = normalizeSeq([bindNode, ...tailNodes]);
-    const node = composite.length === 1 ? composite[0] : { t: "glue", inner: composite };
-
-    return { node: isOptional ? { t: "opt", inner: [node] } : node, nextI };
-  }
-
   // Choice group if top-level '|'
-  const parts = splitTopLevel(content, "|");
+  const parts = splitTopLevel(innerTrim, "|");
   if (parts.length > 1) {
     const opts = parts.map((p) => parseTemplate(p.trim()));
     const choice = { t: "choice", opts };
     return { node: isOptional ? { t: "opt", inner: [choice] } : choice, nextI };
   }
 
-  // Plain group (possibly optional) e.g. {content}?
+  // Plain group (possibly optional)
   const innerNodes = parseTemplate(innerTrim);
   const normalized = normalizeSeq(innerNodes);
   const node = normalized.length === 1 ? normalized[0] : { t: "glue", inner: normalized };
@@ -309,6 +458,34 @@ function splitTopLevel(s, sep) {
     if (ch === "{") depth++;
     else if (ch === "}") depth = Math.max(0, depth - 1);
     else if (depth === 0 && ch === sep) {
+      out.push(s.slice(last, i));
+      last = i + 1;
+    }
+  }
+  out.push(s.slice(last));
+  return out;
+}
+
+function splitTopLevelMixed(s, sepChar) {
+  // Splits by sepChar at top level, respecting { } and {{ }} nesting.
+  const out = [];
+  let depthBrace = 0;
+  let depthDC = 0;
+  let last = 0;
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    const next = s[i + 1];
+
+    if (ch === "{" && next === "{") { depthDC++; i++; continue; }
+    if (ch === "}" && next === "}") { depthDC = Math.max(0, depthDC - 1); i++; continue; }
+    if (depthDC > 0) continue;
+
+    if (ch === "{") depthBrace++;
+    else if (ch === "}") depthBrace = Math.max(0, depthBrace - 1);
+    if (depthBrace > 0) continue;
+
+    if (ch === sepChar) {
       out.push(s.slice(last, i));
       last = i + 1;
     }
@@ -356,20 +533,16 @@ function countVariance(ast) {
       case "text":
       case "arg":
       case "bindRef":
+      case "mapLookup":
         return 1;
-
       case "glue":
         return seq(n.inner);
-
       case "bind":
         return Math.max(1, n.opts.length);
-
       case "opt":
         return 1 + seq(n.inner);
-
       case "choice":
         return n.opts.reduce((sum, opt) => sum + seq(opt), 0);
-
       default:
         throw new Error(`Unknown node type: ${n.t}`);
     }
@@ -384,6 +557,7 @@ function walkAst(ast, fn) {
     if (n.t === "choice") for (const opt of n.opts) walkAst(opt, fn);
     else if (n.t === "opt") walkAst(n.inner, fn);
     else if (n.t === "glue") walkAst(n.inner, fn);
+    else if (n.t === "mapLookup") for (const k of Object.keys(n.map)) walkAst(n.map[k], fn);
   }
 }
 
@@ -433,10 +607,7 @@ function renderNode(n, ctx, pieces) {
 
     case "bindRef": {
       const b = ctx.binds[n.key];
-      if (!b) {
-        pieces.push(`{#${n.key}.1}`);
-        return;
-      }
+      if (!b) return; // unresolved => empty
       const out =
         n.mode === "other"
           ? b.opts[(b.chosenIdx + 1) % b.opts.length]
@@ -445,9 +616,26 @@ function renderNode(n, ctx, pieces) {
       return;
     }
 
-    case "glue":
+    case "glue": {
+      // Glue concatenates with no injected spaces
       pieces.push(renderGlue(n.inner, ctx));
       return;
+    }
+
+    case "mapLookup": {
+      const b = ctx.binds[n.refKey];
+      if (!b) return;
+
+      const chosen = b.opts[b.chosenIdx];
+      const ast = n.map[chosen];
+      if (!ast) return;
+
+      // Render selected value as glue-like concatenation
+      const tmp = [];
+      renderSeq(ast, ctx, tmp);
+      pieces.push(tmp.join(""));
+      return;
+    }
 
     default:
       throw new Error(`Unknown node type during render: ${n.t}`);
@@ -455,20 +643,6 @@ function renderNode(n, ctx, pieces) {
 }
 
 function renderGlue(inner, ctx) {
-  // Special-case: {{#v.1}ing}
-  if (
-    inner.length === 2 &&
-    inner[0].t === "bindRef" &&
-    inner[0].mode === "other" &&
-    inner[1].t === "text" &&
-    inner[1].v === "ing"
-  ) {
-    const b = ctx.binds[inner[0].key];
-    if (!b) return `{#${inner[0].key}.1}ing`;
-    const other = b.opts[(b.chosenIdx + 1) % b.opts.length];
-    return toIng(other);
-  }
-
   const tmp = [];
   renderSeq(inner, ctx, tmp);
   return tmp.join("");
@@ -479,16 +653,11 @@ function renderGlue(inner, ctx) {
  * ========================= */
 
 function expandAll(ast, { args }) {
-  // Each expansion state carries binder assignments to support correlations.
-  // We build strings incrementally.
-
-  /** @type {{ s: string, binds: Record<string, { opts: string[], chosenIdx: number }|undefined> }[]} */
   let states = [{ s: "", binds: Object.create(null) }];
 
   for (const node of ast) {
     states = expandNodeAll(node, states, args);
   }
-
   return states.map((st) => st.s);
 }
 
@@ -499,12 +668,11 @@ function expandNodeAll(node, states, args) {
 
     case "arg": {
       const val = resolveArg(node.k, args);
-      const insert = "  " + val + "  ";
-      return states.map((st) => ({ s: st.s + insert, binds: st.binds }));
+      const ins = "  " + val + "  ";
+      return states.map((st) => ({ s: st.s + ins, binds: st.binds }));
     }
 
     case "opt": {
-      // omitted OR included
       const omitted = states.map((st) => ({ s: st.s, binds: st.binds }));
       const included = expandSeqAll(node.inner, states, args);
       return omitted.concat(included);
@@ -512,9 +680,7 @@ function expandNodeAll(node, states, args) {
 
     case "choice": {
       const out = [];
-      for (const opt of node.opts) {
-        out.push(...expandSeqAll(opt, states, args));
-      }
+      for (const opt of node.opts) out.push(...expandSeqAll(opt, states, args));
       return out;
     }
 
@@ -538,37 +704,32 @@ function expandNodeAll(node, states, args) {
           ? (node.mode === "other"
               ? b.opts[(b.chosenIdx + 1) % b.opts.length]
               : b.opts[b.chosenIdx]) ?? ""
-          : `{#${node.key}.1}`;
+          : "";
         return { s: st.s + outWord, binds: st.binds };
       });
     }
 
     case "glue": {
-      // Expand glue inner without spaces and append as a single chunk.
       const out = [];
       for (const st of states) {
-        // Special-case {{#v.1}ing}
-        if (
-          node.inner.length === 2 &&
-          node.inner[0].t === "bindRef" &&
-          node.inner[0].mode === "other" &&
-          node.inner[1].t === "text" &&
-          node.inner[1].v === "ing"
-        ) {
-          const b = st.binds[node.inner[0].key];
-          const chunk = b
-            ? toIng(b.opts[(b.chosenIdx + 1) % b.opts.length])
-            : `{#${node.inner[0].key}.1}ing`;
-          out.push({ s: st.s + chunk, binds: st.binds });
-          continue;
-        }
-
-        // General glue: enumerate all inner possibilities, but keep binder state threaded through.
         const innerStates = expandSeqAll(node.inner, [{ s: "", binds: st.binds }], args);
-        for (const innerSt of innerStates) {
-          // IMPORTANT: glue appends to outer string, but must preserve resulting binder state
-          out.push({ s: st.s + innerSt.s, binds: innerSt.binds });
-        }
+        for (const innerSt of innerStates) out.push({ s: st.s + innerSt.s, binds: innerSt.binds });
+      }
+      return out;
+    }
+
+    case "mapLookup": {
+      const out = [];
+      for (const st of states) {
+        const b = st.binds[node.refKey];
+        if (!b) { out.push({ s: st.s, binds: st.binds }); continue; }
+
+        const chosen = b.opts[b.chosenIdx];
+        const ast2 = node.map[chosen];
+        if (!ast2) { out.push({ s: st.s, binds: st.binds }); continue; }
+
+        const innerStates = expandSeqAll(ast2, [{ s: "", binds: st.binds }], args);
+        for (const innerSt of innerStates) out.push({ s: st.s + innerSt.s, binds: innerSt.binds });
       }
       return out;
     }
@@ -580,9 +741,7 @@ function expandNodeAll(node, states, args) {
 
 function expandSeqAll(nodes, states, args) {
   let outStates = states;
-  for (const n of nodes) {
-    outStates = expandNodeAll(n, outStates, args);
-  }
+  for (const n of nodes) outStates = expandNodeAll(n, outStates, args);
   return outStates;
 }
 
@@ -593,14 +752,12 @@ function shallowCloneBinds(binds) {
 }
 
 /* =========================
- * Arg resolution + whitespace policy
+ * Arg resolution + whitespace normalization
  * ========================= */
 
 function resolveArg(key, args) {
-  // 1) literal key
   if (Object.prototype.hasOwnProperty.call(args, key)) return safeToString(args[key]);
 
-  // 2) failsafe path resolution: foo.bar.baz
   const parts = key.split(".");
   if (!parts.length) return "";
 
@@ -620,36 +777,9 @@ function safeToString(v) {
   if (v == null) return "";
   if (typeof v === "string") return v;
   if (typeof v === "number" || typeof v === "boolean" || typeof v === "bigint") return String(v);
-  try {
-    return String(v);
-  } catch {
-    return "";
-  }
+  try { return String(v); } catch { return ""; }
 }
 
 function normalizeWhitespace(s) {
   return String(s ?? "").replace(/\s+/g, " ").trim();
-}
-
-/* =========================
- * Inflection helpers
- * ========================= */
-
-function toIng(word) {
-  const w = String(word ?? "");
-  const lower = w.toLowerCase();
-
-  // Minimal irregulars for your start/begin pairing
-  if (lower === "begin") return matchCase(w, "beginning");
-  if (lower === "start") return matchCase(w, "starting");
-
-  // Fallback inflection
-  if (lower.endsWith("ie")) return matchCase(w, lower.slice(0, -2) + "ying");
-  if (lower.endsWith("e") && !lower.endsWith("ee")) return matchCase(w, lower.slice(0, -1) + "ing");
-  return matchCase(w, lower + "ing");
-}
-
-function matchCase(src, out) {
-  if (/^[A-Z]/.test(src)) return out[0].toUpperCase() + out.slice(1);
-  return out;
 }
