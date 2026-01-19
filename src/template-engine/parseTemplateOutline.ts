@@ -1,33 +1,30 @@
+
 /**
  * templateOutline.mjs (vanilla JS, ESM)
  * -----------------------------------
- * Parses a markdown-ish bullet outline into a randomized template writer.
+ * Adds writeAll(args): returns EVERY possible permutation across ALL expanded templates.
  *
- * Returns:
- *  {
- *    args: { Subject: null, ... },
- *    variance: <number>,
- *    write: (args) => string
- *  }
+ * Notes / constraints:
+ *  - Optionals {x}? expand to: omitted OR included.
+ *  - Choices {a|b} expand to all options.
+ *  - Binder {#v{start|begin} playing|play}:
+ *      - Expands to BOTH:
+ *          - "start playing" + correlated glue uses toggled "begin" -> "beginning"
+ *          - "begin playing" + correlated glue uses toggled "start" -> "starting"
+ *      - And also expands to the non-binder alternative "play" if present in a choice group.
+ *  - Glue {{ ... } (single closing brace) expands by concatenating inner expansions.
+ *    Special-case {{#v.1}ing} is handled to match your start/begin pairing.
  *
- * Supported inline syntax (matches your latest example):
- *  - Args:           ${Subject} (backticks are ignored)
- *  - Alternation:    {a|b|c}
- *  - Optional:       {content}?   and   {a|b}?
- *  - Nesting:        {Xbox|the Xbox {content}? {catalog|library}}
- *  - Binder:         {#v{start|begin} playing|play}
- *  - Binder "other": {#v.1} (toggle: if chosen start -> other begin; chosen begin -> other start)
- *  - Glue:           {{ ... }} renders inner content as a single unspaced token
- *      Special-case: {{#v.1}ing} => "starting"/"beginning" via inflection of the toggled word
+ * Whitespace policy (as requested):
+ *  - Every ${...} insertion is wrapped as "  value  "
+ *  - Final output collapses whitespace with /\s+/g => " " and trims.
  *
- * Outline semantics:
- *  - Top-level bullets are "prefix groups" and are not emitted alone.
- *  - Any deeper bullet is a full template.
- *  - If a node has children, they are optional continuations:
- *      "now includes X" and "now includes X, which joined..." are both emitted.
+ * Dotted variables:
+ *  - First literal lookup: args["AllTiers.length"]
+ *  - Else path lookup: args["AllTiers"]?.["length"] (supports deeper paths)
  */
 
-export function parseTemplateOutline(outlineText, { rng = Math.random } = {}) {
+ export function parseTemplateOutline(outlineText, { rng = Math.random } = {}) {
   const root = parseOutline(outlineText);
   const templateStrings = expandOutline(root);
 
@@ -62,10 +59,21 @@ export function parseTemplateOutline(outlineText, { rng = Math.random } = {}) {
       args: argValues,
       binds: Object.create(null),
     };
-    return render(chosen.ast, ctx).trim();
+    const raw = render(chosen.ast, ctx);
+    return normalizeWhitespace(raw);
   }
 
-  return { args, variance, write };
+  function writeAll(argValues = {}) {
+    const all = [];
+    for (const t of compiled) {
+      all.push(...expandAll(t.ast, { args: argValues }));
+    }
+    // Normalize + de-dupe (in case different paths converge)
+    const normed = all.map(normalizeWhitespace).filter((x) => x.length > 0);
+    return uniq(normed);
+  }
+
+  return { args, variance, write, writeAll };
 }
 
 /* =========================
@@ -99,7 +107,6 @@ function parseOutline(text) {
 }
 
 function inferIndentLevel(indentSpaces) {
-  // Prefer 4-space steps; fall back to 2-space steps.
   if (indentSpaces % 4 === 0) return indentSpaces / 4;
   if (indentSpaces % 2 === 0) return indentSpaces / 2;
   return Math.floor(indentSpaces / 2);
@@ -108,7 +115,6 @@ function inferIndentLevel(indentSpaces) {
 function expandOutline(root) {
   const out = [];
   for (const group of root.children) {
-    // group is a "prefix group" (not emitted alone)
     for (const s of expandFrom(group, { emitSelf: false })) out.push(s);
   }
   return uniq(out);
@@ -125,13 +131,11 @@ function expandFrom(node, { emitSelf }) {
     return results;
   }
 
-  // Optional continuations
   for (const child of node.children) {
     for (const c of expandFrom(child, { emitSelf: true })) {
       results.push(joinPieces(self, stripBackticks(c)));
     }
   }
-
   return results;
 }
 
@@ -160,17 +164,7 @@ function uniq(arr) {
 
 /* =========================
  * Template parsing (AST)
- * =========================
- *
- * Node types:
- *  - text:     { t:"text", v:string }
- *  - arg:      { t:"arg", k:string }
- *  - choice:   { t:"choice", opts: Node[][] }
- *  - opt:      { t:"opt", inner: Node[] }
- *  - bind:     { t:"bind", key:string, opts:string[] }         // emits chosen word, stores idx
- *  - bindRef:  { t:"bindRef", key:string, mode:"chosen"|"other" }
- *  - glue:     { t:"glue", inner: Node[] }                     // renders as a single token
- */
+ * ========================= */
 
 function parseTemplate(input) {
   const s = String(input ?? "");
@@ -186,9 +180,9 @@ function parseSeq(s, start, until) {
   while (i < s.length) {
     if (until && s[i] === until) break;
 
-    // Glue: {{ ... }}
+    // Glue: {{ ... }   (single closing brace)
     if (s[i] === "{" && s[i + 1] === "{") {
-      const { node, nextI } = parseGlue(s, i);
+      const { node, nextI } = parseGlueBalanced(s, i);
       nodes.push(node);
       i = nextI;
       continue;
@@ -221,12 +215,22 @@ function parseSeq(s, start, until) {
   return { nodes, i };
 }
 
-function parseGlue(s, openIdx) {
-  const close = s.indexOf("}}", openIdx + 2);
-  if (close === -1) throw new Error(`Unclosed {{...}} at index ${openIdx}`);
-  const innerRaw = s.slice(openIdx + 2, close);
-  const inner = parseTemplate(innerRaw);
-  return { node: { t: "glue", inner }, nextI: close + 2 };
+function parseGlueBalanced(s, openIdx) {
+  let i = openIdx + 2; // after '{{'
+  let depth = 0;
+  for (; i < s.length; i++) {
+    const ch = s[i];
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      if (depth === 0) {
+        const innerRaw = s.slice(openIdx + 2, i);
+        const inner = parseTemplate(innerRaw);
+        return { node: { t: "glue", inner }, nextI: i + 1 };
+      }
+      depth--;
+    }
+  }
+  throw new Error(`Unclosed {{...} at index ${openIdx}`);
 }
 
 function parseBraceGroup(s, openIdx) {
@@ -384,79 +388,74 @@ function walkAst(ast, fn) {
 }
 
 /* =========================
- * Rendering
+ * Rendering (single random)
  * ========================= */
 
 function render(ast, ctx) {
-  const tokens = [];
-  renderSeq(ast, ctx, tokens);
-  return joinTokens(tokens);
+  const pieces = [];
+  renderSeq(ast, ctx, pieces);
+  return pieces.join("");
 }
 
-function renderSeq(nodes, ctx, tokens) {
-  for (const n of nodes) renderNode(n, ctx, tokens);
+function renderSeq(nodes, ctx, pieces) {
+  for (const n of nodes) renderNode(n, ctx, pieces);
 }
 
-function renderNode(n, ctx, tokens) {
+function renderNode(n, ctx, pieces) {
   switch (n.t) {
     case "text":
-      pushTokens(tokens, n.v);
+      pieces.push(n.v);
       return;
 
-    case "arg":
-      pushTokens(tokens, ctx.args[n.k] ?? `\${${n.k}}`);
+    case "arg": {
+      const value = resolveArg(n.k, ctx.args);
+      pieces.push("  ", value, "  ");
       return;
+    }
 
     case "choice": {
       const idx = Math.floor(ctx.rng() * n.opts.length);
-      renderSeq(n.opts[idx], ctx, tokens);
+      renderSeq(n.opts[idx], ctx, pieces);
       return;
     }
 
     case "opt":
       if (ctx.rng() < 0.5) return;
-      renderSeq(n.inner, ctx, tokens);
+      renderSeq(n.inner, ctx, pieces);
       return;
 
     case "bind": {
       const idx = Math.floor(ctx.rng() * n.opts.length);
       ctx.binds[n.key] = { opts: n.opts, chosenIdx: idx };
-      pushTokens(tokens, n.opts[idx] ?? "");
+      pieces.push(n.opts[idx] ?? "");
       return;
     }
 
     case "bindRef": {
       const b = ctx.binds[n.key];
       if (!b) {
-        pushTokens(tokens, `{#${n.key}.1}`);
+        pieces.push(`{#${n.key}.1}`);
         return;
       }
-      // "other" toggles for 2 opts; cycles for >2
-      const out = n.mode === "other"
-        ? b.opts[(b.chosenIdx + 1) % b.opts.length]
-        : b.opts[b.chosenIdx];
-      pushTokens(tokens, out ?? "");
+      const out =
+        n.mode === "other"
+          ? b.opts[(b.chosenIdx + 1) % b.opts.length]
+          : b.opts[b.chosenIdx];
+      pieces.push(out ?? "");
       return;
     }
 
-    case "glue": {
-      tokens.push(renderGlue(n.inner, ctx));
+    case "glue":
+      pieces.push(renderGlue(n.inner, ctx));
       return;
-    }
 
     default:
       throw new Error(`Unknown node type during render: ${n.t}`);
   }
 }
 
-/**
- * Glue: renders inner without inserting spaces.
- * Special-case: {{#v.1}ing} should yield:
- *   - if binder chose "begin" => "starting"
- *   - if binder chose "start" => "beginning"
- */
 function renderGlue(inner, ctx) {
-  // Pattern: [bindRef(other), text("ing")]
+  // Special-case: {{#v.1}ing}
   if (
     inner.length === 2 &&
     inner[0].t === "bindRef" &&
@@ -466,16 +465,175 @@ function renderGlue(inner, ctx) {
   ) {
     const b = ctx.binds[inner[0].key];
     if (!b) return `{#${inner[0].key}.1}ing`;
-
     const other = b.opts[(b.chosenIdx + 1) % b.opts.length];
     return toIng(other);
   }
 
-  // Generic glue: render to tokens then concat
   const tmp = [];
   renderSeq(inner, ctx, tmp);
   return tmp.join("");
 }
+
+/* =========================
+ * writeAll: enumerate all permutations
+ * ========================= */
+
+function expandAll(ast, { args }) {
+  // Each expansion state carries binder assignments to support correlations.
+  // We build strings incrementally.
+
+  /** @type {{ s: string, binds: Record<string, { opts: string[], chosenIdx: number }|undefined> }[]} */
+  let states = [{ s: "", binds: Object.create(null) }];
+
+  for (const node of ast) {
+    states = expandNodeAll(node, states, args);
+  }
+
+  return states.map((st) => st.s);
+}
+
+function expandNodeAll(node, states, args) {
+  switch (node.t) {
+    case "text":
+      return states.map((st) => ({ s: st.s + node.v, binds: st.binds }));
+
+    case "arg": {
+      const val = resolveArg(node.k, args);
+      const insert = "  " + val + "  ";
+      return states.map((st) => ({ s: st.s + insert, binds: st.binds }));
+    }
+
+    case "opt": {
+      // omitted OR included
+      const omitted = states.map((st) => ({ s: st.s, binds: st.binds }));
+      const included = expandSeqAll(node.inner, states, args);
+      return omitted.concat(included);
+    }
+
+    case "choice": {
+      const out = [];
+      for (const opt of node.opts) {
+        out.push(...expandSeqAll(opt, states, args));
+      }
+      return out;
+    }
+
+    case "bind": {
+      const out = [];
+      for (let idx = 0; idx < node.opts.length; idx++) {
+        const word = node.opts[idx] ?? "";
+        for (const st of states) {
+          const binds2 = shallowCloneBinds(st.binds);
+          binds2[node.key] = { opts: node.opts, chosenIdx: idx };
+          out.push({ s: st.s + word, binds: binds2 });
+        }
+      }
+      return out;
+    }
+
+    case "bindRef": {
+      return states.map((st) => {
+        const b = st.binds[node.key];
+        const outWord = b
+          ? (node.mode === "other"
+              ? b.opts[(b.chosenIdx + 1) % b.opts.length]
+              : b.opts[b.chosenIdx]) ?? ""
+          : `{#${node.key}.1}`;
+        return { s: st.s + outWord, binds: st.binds };
+      });
+    }
+
+    case "glue": {
+      // Expand glue inner without spaces and append as a single chunk.
+      const out = [];
+      for (const st of states) {
+        // Special-case {{#v.1}ing}
+        if (
+          node.inner.length === 2 &&
+          node.inner[0].t === "bindRef" &&
+          node.inner[0].mode === "other" &&
+          node.inner[1].t === "text" &&
+          node.inner[1].v === "ing"
+        ) {
+          const b = st.binds[node.inner[0].key];
+          const chunk = b
+            ? toIng(b.opts[(b.chosenIdx + 1) % b.opts.length])
+            : `{#${node.inner[0].key}.1}ing`;
+          out.push({ s: st.s + chunk, binds: st.binds });
+          continue;
+        }
+
+        // General glue: enumerate all inner possibilities, but keep binder state threaded through.
+        const innerStates = expandSeqAll(node.inner, [{ s: "", binds: st.binds }], args);
+        for (const innerSt of innerStates) {
+          // IMPORTANT: glue appends to outer string, but must preserve resulting binder state
+          out.push({ s: st.s + innerSt.s, binds: innerSt.binds });
+        }
+      }
+      return out;
+    }
+
+    default:
+      throw new Error(`Unknown node type in expandNodeAll: ${node.t}`);
+  }
+}
+
+function expandSeqAll(nodes, states, args) {
+  let outStates = states;
+  for (const n of nodes) {
+    outStates = expandNodeAll(n, outStates, args);
+  }
+  return outStates;
+}
+
+function shallowCloneBinds(binds) {
+  const next = Object.create(null);
+  for (const k of Object.keys(binds)) next[k] = binds[k];
+  return next;
+}
+
+/* =========================
+ * Arg resolution + whitespace policy
+ * ========================= */
+
+function resolveArg(key, args) {
+  // 1) literal key
+  if (Object.prototype.hasOwnProperty.call(args, key)) return safeToString(args[key]);
+
+  // 2) failsafe path resolution: foo.bar.baz
+  const parts = key.split(".");
+  if (!parts.length) return "";
+
+  const rootKey = parts[0];
+  if (!Object.prototype.hasOwnProperty.call(args, rootKey)) return "";
+  let cur = args[rootKey];
+
+  for (let i = 1; i < parts.length; i++) {
+    if (cur == null) return "";
+    cur = cur[parts[i]];
+  }
+
+  return safeToString(cur);
+}
+
+function safeToString(v) {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean" || typeof v === "bigint") return String(v);
+  try {
+    return String(v);
+  } catch {
+    return "";
+  }
+}
+
+function normalizeWhitespace(s) {
+  return String(s ?? "").replace(/\s+/g, " ").trim();
+}
+
+/* =========================
+ * Inflection helpers
+ * ========================= */
 
 function toIng(word) {
   const w = String(word ?? "");
@@ -495,49 +653,3 @@ function matchCase(src, out) {
   if (/^[A-Z]/.test(src)) return out[0].toUpperCase() + out.slice(1);
   return out;
 }
-
-function pushTokens(tokens, raw) {
-  if (raw == null) return;
-  const str = String(raw);
-  const parts = str.split(/(\s+)/).filter((p) => p && !/^\s+$/.test(p));
-  for (const p of parts) tokens.push(p);
-}
-
-function joinTokens(tokens) {
-  let out = "";
-  for (const t of tokens) {
-    if (!t) continue;
-    if (!out) {
-      out = t;
-      continue;
-    }
-    const noSpaceBefore = /^[,.;:!?)]/.test(t);
-    out += noSpaceBefore ? t : " " + t;
-  }
-  out = out.replace(/\s+([,.;:!?])/g, "$1").replace(/[ \t]{2,}/g, " ");
-  return out;
-}
-
-/* =========================
- * Quick smoke test (optional)
- * =========================
- *
- * const outline = `
- * - \`${Subject}\`
- *     - is now available on Xbox Game Pass.
- *     - has joined {Xbox Game Pass|the Xbox Game Pass {content}? {catalog|library}}.
- * - Xbox Game Pass
- *     - has add_e_d \`${Subject}\` to its {ever-expanding|steadily growing}? {content}? {catalog|library}.
- *     - users can {#v{start|begin} playing|play} \`${Subject}\` as part of their subscriptions {{#v.1}ing} today.
- * - The Xbox Game Pass {content}? {catalog|library}
- *     - has expanded to include \`${Subject}\`
- *     - includes \`${Subject}\` {as of|starting} today.
- *     - now includes \`${Subject}\`
- *         - {, which joined the service earlier today}
- * `;
- *
- * const prog = parseTemplateOutline(outline);
- * console.log(prog.args);     // { Subject: null }
- * console.log(prog.variance); // number
- * console.log(prog.write({ Subject: "Kingdom Come: Deliverance 2" }));
- */
