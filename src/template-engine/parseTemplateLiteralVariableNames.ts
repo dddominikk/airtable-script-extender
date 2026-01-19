@@ -1,4 +1,4 @@
-function parseAllTemplateLiteralVariableNames(templateLiteral: string) {
+function parseTemplateLiteralVariableNames(templateLiteral: string) {
     
     const tlVarPattern = new RegExp(`\\$\{\\s*(?<varKey>[^}]+)\\s*\}`);
     
