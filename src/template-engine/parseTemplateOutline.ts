@@ -1,79 +1,37 @@
 /**
- * TemplateOutline.ts
- * ------------------
- * Parses a markdown-ish bullet outline and returns:
+ * templateOutline.mjs (vanilla JS, ESM)
+ * -----------------------------------
+ * Parses a markdown-ish bullet outline into a randomized template writer.
+ *
+ * Returns:
  *  {
- *    args: Record<string, null>,
- *    variance: number,
+ *    args: { Subject: null, ... },
+ *    variance: <number>,
  *    write: (args) => string
  *  }
  *
- * Supported inline syntax (per your examples):
- *  - Args:           ${Subject} (can appear inside backticks)
+ * Supported inline syntax (matches your latest example):
+ *  - Args:           ${Subject} (backticks are ignored)
  *  - Alternation:    {a|b|c}
  *  - Optional:       {content}?   and   {a|b}?
  *  - Nesting:        {Xbox|the Xbox {content}? {catalog|library}}
  *  - Binder:         {#v{start|begin} playing|play}
- *  - Binder ref:     {#v.1}  (means "the other" choice, i.e., toggled)
- *  - “Glue”:         {{...}} renders its contents as a single unspaced token.
- *      Special-cases {{#v.1}ing} to produce "starting"/"beginning" correctly.
+ *  - Binder "other": {#v.1} (toggle: if chosen start -> other begin; chosen begin -> other start)
+ *  - Glue:           {{ ... }} renders inner content as a single unspaced token
+ *      Special-case: {{#v.1}ing} => "starting"/"beginning" via inflection of the toggled word
+ *
+ * Outline semantics:
+ *  - Top-level bullets are "prefix groups" and are not emitted alone.
+ *  - Any deeper bullet is a full template.
+ *  - If a node has children, they are optional continuations:
+ *      "now includes X" and "now includes X, which joined..." are both emitted.
  */
 
-export type RNG = () => number;
-
-export interface TemplateProgram {
-  /** All argument keys discovered in templates (values are null placeholders). */
-  args: Record<string, null>;
-  /** Total permutation count across all expanded templates. */
-  variance: number;
-  /** Render one randomly selected template instance. */
-  write: (args: Record<string, unknown>) => string;
-}
-
-export interface ParseOptions {
-  rng?: RNG;
-}
-
-type OutlineNode = {
-  text: string;
-  level: number;
-  children: OutlineNode[];
-};
-
-type AstNode =
-  | { t: "text"; v: string }
-  | { t: "arg"; k: string }
-  | { t: "choice"; opts: AstNode[][] }
-  | { t: "opt"; inner: AstNode[] }
-  | { t: "bind"; key: string; opts: string[] }
-  | { t: "bindRef"; key: string; mode: "chosen" | "other" }
-  | { t: "glue"; inner: AstNode[] };
-
-type CompiledTemplate = {
-  source: string;
-  ast: AstNode[];
-  variance: number;
-  args: Record<string, true>;
-};
-
-type BindState = {
-  opts: string[];
-  chosenIdx: number;
-};
-
-type RenderContext = {
-  rng: RNG;
-  args: Record<string, unknown>;
-  binds: Record<string, BindState | undefined>;
-};
-
-export function parseTemplateOutline(outlineText: string, opts: ParseOptions = {}): TemplateProgram {
-  const rng = opts.rng ?? Math.random;
-
+export function parseTemplateOutline(outlineText, { rng = Math.random } = {}) {
   const root = parseOutline(outlineText);
   const templateStrings = expandOutline(root);
 
-  const compiled: CompiledTemplate[] = templateStrings.map((source) => {
+  const compiled = templateStrings.map((source) => {
     const ast = parseTemplate(source);
     return {
       source,
@@ -83,29 +41,29 @@ export function parseTemplateOutline(outlineText: string, opts: ParseOptions = {
     };
   });
 
-  const args: Record<string, null> = {};
+  const args = {};
   for (const t of compiled) for (const k of Object.keys(t.args)) args[k] = null;
 
   const variance = compiled.reduce((sum, t) => sum + t.variance, 0);
 
-  const pickWeighted = (): CompiledTemplate => {
+  function pickWeighted() {
     let roll = rng() * variance;
     for (const t of compiled) {
       roll -= t.variance;
       if (roll <= 0) return t;
     }
     return compiled[compiled.length - 1];
-  };
+  }
 
-  const write = (argValues: Record<string, unknown>): string => {
+  function write(argValues = {}) {
     const chosen = pickWeighted();
-    const ctx: RenderContext = {
+    const ctx = {
       rng,
-      args: argValues ?? {},
+      args: argValues,
       binds: Object.create(null),
     };
     return render(chosen.ast, ctx).trim();
-  };
+  }
 
   return { args, variance, write };
 }
@@ -114,14 +72,14 @@ export function parseTemplateOutline(outlineText: string, opts: ParseOptions = {
  * Outline parsing + expansion
  * ========================= */
 
-function parseOutline(text: string): OutlineNode {
+function parseOutline(text) {
   const lines = String(text ?? "")
     .split(/\r?\n/)
     .map((l) => l.replace(/\t/g, "  "))
     .filter((l) => l.trim().length);
 
-  const root: OutlineNode = { text: "", level: -1, children: [] };
-  const stack: OutlineNode[] = [root];
+  const root = { text: "", level: -1, children: [] };
+  const stack = [root];
 
   for (const raw of lines) {
     const m = raw.match(/^(\s*)-\s+(.*)$/);
@@ -130,7 +88,7 @@ function parseOutline(text: string): OutlineNode {
     const indent = m[1].length;
     const level = inferIndentLevel(indent);
 
-    const node: OutlineNode = { text: m[2].trim(), level, children: [] };
+    const node = { text: m[2].trim(), level, children: [] };
 
     while (stack.length && stack[stack.length - 1].level >= level) stack.pop();
     (stack[stack.length - 1] ?? root).children.push(node);
@@ -140,20 +98,15 @@ function parseOutline(text: string): OutlineNode {
   return root;
 }
 
-/**
- * Tolerant indentation inference.
- * If you standardize on 4 spaces per indent, this effectively becomes level = indent/4.
- * If you use 2 spaces, it'll still "mostly work" but you should standardize.
- */
-function inferIndentLevel(indentSpaces: number): number {
+function inferIndentLevel(indentSpaces) {
   // Prefer 4-space steps; fall back to 2-space steps.
   if (indentSpaces % 4 === 0) return indentSpaces / 4;
   if (indentSpaces % 2 === 0) return indentSpaces / 2;
   return Math.floor(indentSpaces / 2);
 }
 
-function expandOutline(root: OutlineNode): string[] {
-  const out: string[] = [];
+function expandOutline(root) {
+  const out = [];
   for (const group of root.children) {
     // group is a "prefix group" (not emitted alone)
     for (const s of expandFrom(group, { emitSelf: false })) out.push(s);
@@ -161,14 +114,14 @@ function expandOutline(root: OutlineNode): string[] {
   return uniq(out);
 }
 
-function expandFrom(node: OutlineNode, cfg: { emitSelf: boolean }): string[] {
-  const results: string[] = [];
+function expandFrom(node, { emitSelf }) {
+  const results = [];
   const self = stripBackticks(node.text);
 
-  if (cfg.emitSelf) results.push(self);
+  if (emitSelf) results.push(self);
 
-  if (node.children.length === 0) {
-    if (!cfg.emitSelf) results.push(self);
+  if (!node.children.length) {
+    if (!emitSelf) results.push(self);
     return results;
   }
 
@@ -182,20 +135,20 @@ function expandFrom(node: OutlineNode, cfg: { emitSelf: boolean }): string[] {
   return results;
 }
 
-function joinPieces(a: string, b: string): string {
+function joinPieces(a, b) {
   if (!a) return b;
   if (!b) return a;
   if (/^[,.;:!?)]/.test(b)) return a + b;
   return a + " " + b;
 }
 
-function stripBackticks(s: string): string {
+function stripBackticks(s) {
   return String(s).replace(/`/g, "");
 }
 
-function uniq(arr: string[]): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
+function uniq(arr) {
+  const seen = new Set();
+  const out = [];
   for (const x of arr) {
     if (!seen.has(x)) {
       seen.add(x);
@@ -207,17 +160,27 @@ function uniq(arr: string[]): string[] {
 
 /* =========================
  * Template parsing (AST)
- * ========================= */
+ * =========================
+ *
+ * Node types:
+ *  - text:     { t:"text", v:string }
+ *  - arg:      { t:"arg", k:string }
+ *  - choice:   { t:"choice", opts: Node[][] }
+ *  - opt:      { t:"opt", inner: Node[] }
+ *  - bind:     { t:"bind", key:string, opts:string[] }         // emits chosen word, stores idx
+ *  - bindRef:  { t:"bindRef", key:string, mode:"chosen"|"other" }
+ *  - glue:     { t:"glue", inner: Node[] }                     // renders as a single token
+ */
 
-function parseTemplate(input: string): AstNode[] {
+function parseTemplate(input) {
   const s = String(input ?? "");
   const { nodes, i } = parseSeq(s, 0, null);
   if (i !== s.length) throw new Error(`Template parse: trailing content at index ${i}`);
   return normalizeSeq(nodes);
 }
 
-function parseSeq(s: string, start: number, until: string | null): { nodes: AstNode[]; i: number } {
-  const nodes: AstNode[] = [];
+function parseSeq(s, start, until) {
+  const nodes = [];
   let i = start;
 
   while (i < s.length) {
@@ -258,17 +221,15 @@ function parseSeq(s: string, start: number, until: string | null): { nodes: AstN
   return { nodes, i };
 }
 
-function parseGlue(s: string, openIdx: number): { node: AstNode; nextI: number } {
-  // starts with "{{"
+function parseGlue(s, openIdx) {
   const close = s.indexOf("}}", openIdx + 2);
   if (close === -1) throw new Error(`Unclosed {{...}} at index ${openIdx}`);
-
   const innerRaw = s.slice(openIdx + 2, close);
   const inner = parseTemplate(innerRaw);
   return { node: { t: "glue", inner }, nextI: close + 2 };
 }
 
-function parseBraceGroup(s: string, openIdx: number): { node: AstNode; nextI: number } {
+function parseBraceGroup(s, openIdx) {
   const { content, endIdx } = extractBalanced(s, openIdx);
   let nextI = endIdx + 1;
 
@@ -282,8 +243,8 @@ function parseBraceGroup(s: string, openIdx: number): { node: AstNode; nextI: nu
 
   // Binder ref: {#v.1} means "other"
   if (/^#\w+\.1$/.test(innerTrim)) {
-    const m = innerTrim.match(/^#(\w+)\.1$/)!;
-    const node: AstNode = { t: "bindRef", key: m[1], mode: "other" };
+    const m = innerTrim.match(/^#(\w+)\.1$/);
+    const node = { t: "bindRef", key: m[1], mode: "other" };
     return { node: isOptional ? { t: "opt", inner: [node] } : node, nextI };
   }
 
@@ -296,16 +257,12 @@ function parseBraceGroup(s: string, openIdx: number): { node: AstNode; nextI: nu
     const optsRaw = innerBal.content; // "start|begin"
     const opts = splitTopLevel(optsRaw, "|").map((x) => x.trim()).filter(Boolean);
 
-    const tail = innerTrim.slice(innerBal.endIdx + 1).trimStart(); // "playing|play" lives outside; but in your syntax it’s in the outer group
-    // IMPORTANT: In your example, the binder group itself is one alternative within { ... | ... }.
-    // Here, since we are parsing a single { ... }, we treat "#v{...} <tail>" as a composite:
-    // bind emits word, tail is appended immediately (normal spacing rules apply outside glue).
-    const bindNode: AstNode = { t: "bind", key, opts };
-    const tailNodes: AstNode[] = tail ? [{ t: "text", v: tail }] : [];
+    const tail = innerTrim.slice(innerBal.endIdx + 1).trimStart(); // e.g. "playing"
+    const bindNode = { t: "bind", key, opts };
+    const tailNodes = tail ? [{ t: "text", v: tail }] : [];
 
     const composite = normalizeSeq([bindNode, ...tailNodes]);
-    const node: AstNode =
-      composite.length === 1 ? composite[0] : { t: "glue", inner: composite }; // glue to prevent accidental spacing if author omitted it
+    const node = composite.length === 1 ? composite[0] : { t: "glue", inner: composite };
 
     return { node: isOptional ? { t: "opt", inner: [node] } : node, nextI };
   }
@@ -314,20 +271,18 @@ function parseBraceGroup(s: string, openIdx: number): { node: AstNode; nextI: nu
   const parts = splitTopLevel(content, "|");
   if (parts.length > 1) {
     const opts = parts.map((p) => parseTemplate(p.trim()));
-    const choice: AstNode = { t: "choice", opts };
+    const choice = { t: "choice", opts };
     return { node: isOptional ? { t: "opt", inner: [choice] } : choice, nextI };
   }
 
   // Plain group (possibly optional) e.g. {content}?
   const innerNodes = parseTemplate(innerTrim);
   const normalized = normalizeSeq(innerNodes);
-  const node: AstNode =
-    normalized.length === 1 ? normalized[0] : { t: "glue", inner: normalized };
-
+  const node = normalized.length === 1 ? normalized[0] : { t: "glue", inner: normalized };
   return { node: isOptional ? { t: "opt", inner: [node] } : node, nextI };
 }
 
-function extractBalanced(s: string, openIdx: number): { content: string; endIdx: number } {
+function extractBalanced(s, openIdx) {
   if (s[openIdx] !== "{") throw new Error("extractBalanced: expected '{'");
   let depth = 0;
   for (let i = openIdx; i < s.length; i++) {
@@ -340,8 +295,8 @@ function extractBalanced(s: string, openIdx: number): { content: string; endIdx:
   throw new Error(`Unclosed '{' at index ${openIdx}`);
 }
 
-function splitTopLevel(s: string, sep: string): string[] {
-  const out: string[] = [];
+function splitTopLevel(s, sep) {
+  const out = [];
   let depth = 0;
   let last = 0;
 
@@ -358,20 +313,17 @@ function splitTopLevel(s: string, sep: string): string[] {
   return out;
 }
 
-function normalizeSeq(nodes: AstNode[]): AstNode[] {
-  const merged: AstNode[] = [];
+function normalizeSeq(nodes) {
+  const merged = [];
   for (const n of nodes) {
     const prev = merged[merged.length - 1];
-    if (prev && prev.t === "text" && n.t === "text") {
-      (prev as { t: "text"; v: string }).v += n.v;
-    } else {
-      merged.push(n);
-    }
+    if (prev && prev.t === "text" && n.t === "text") prev.v += n.v;
+    else merged.push(n);
   }
   return merged;
 }
 
-function nextIndexOfAny(s: string, from: number, chars: string[]): number {
+function nextIndexOfAny(s, from, chars) {
   let best = -1;
   for (const c of chars) {
     const idx = s.indexOf(c, from);
@@ -381,21 +333,21 @@ function nextIndexOfAny(s: string, from: number, chars: string[]): number {
 }
 
 /* =========================
- * Variance + arg collection
+ * Variance + args collection
  * ========================= */
 
-function collectArgs(ast: AstNode[]): Record<string, true> {
-  const out: Record<string, true> = Object.create(null);
+function collectArgs(ast) {
+  const out = Object.create(null);
   walkAst(ast, (n) => {
     if (n.t === "arg") out[n.k] = true;
   });
   return out;
 }
 
-function countVariance(ast: AstNode[]): number {
-  const seq = (nodes: AstNode[]): number => nodes.reduce((p, n) => p * node(n), 1);
+function countVariance(ast) {
+  const seq = (nodes) => nodes.reduce((p, n) => p * node(n), 1);
 
-  const node = (n: AstNode): number => {
+  const node = (n) => {
     switch (n.t) {
       case "text":
       case "arg":
@@ -414,17 +366,15 @@ function countVariance(ast: AstNode[]): number {
       case "choice":
         return n.opts.reduce((sum, opt) => sum + seq(opt), 0);
 
-      default: {
-        const _exhaustive: never = n;
-        return _exhaustive;
-      }
+      default:
+        throw new Error(`Unknown node type: ${n.t}`);
     }
   };
 
   return seq(ast);
 }
 
-function walkAst(ast: AstNode[], fn: (n: AstNode) => void): void {
+function walkAst(ast, fn) {
   for (const n of ast) {
     fn(n);
     if (n.t === "choice") for (const opt of n.opts) walkAst(opt, fn);
@@ -437,17 +387,17 @@ function walkAst(ast: AstNode[], fn: (n: AstNode) => void): void {
  * Rendering
  * ========================= */
 
-function render(ast: AstNode[], ctx: RenderContext): string {
-  const tokens: string[] = [];
+function render(ast, ctx) {
+  const tokens = [];
   renderSeq(ast, ctx, tokens);
   return joinTokens(tokens);
 }
 
-function renderSeq(nodes: AstNode[], ctx: RenderContext, tokens: string[]): void {
+function renderSeq(nodes, ctx, tokens) {
   for (const n of nodes) renderNode(n, ctx, tokens);
 }
 
-function renderNode(n: AstNode, ctx: RenderContext, tokens: string[]): void {
+function renderNode(n, ctx, tokens) {
   switch (n.t) {
     case "text":
       pushTokens(tokens, n.v);
@@ -481,35 +431,31 @@ function renderNode(n: AstNode, ctx: RenderContext, tokens: string[]): void {
         pushTokens(tokens, `{#${n.key}.1}`);
         return;
       }
-      const out =
-        n.mode === "other"
-          ? b.opts[(b.chosenIdx + 1) % b.opts.length] // toggle for 2, cycle for >2
-          : b.opts[b.chosenIdx];
+      // "other" toggles for 2 opts; cycles for >2
+      const out = n.mode === "other"
+        ? b.opts[(b.chosenIdx + 1) % b.opts.length]
+        : b.opts[b.chosenIdx];
       pushTokens(tokens, out ?? "");
       return;
     }
 
     case "glue": {
-      const raw = renderGlue(n.inner, ctx);
-      tokens.push(raw);
+      tokens.push(renderGlue(n.inner, ctx));
       return;
     }
 
-    default: {
-      const _exhaustive: never = n;
-      throw new Error(`Unknown node type during render: ${(n as any).t}`);
-    }
+    default:
+      throw new Error(`Unknown node type during render: ${n.t}`);
   }
 }
 
 /**
- * Glue rendering concatenates inner output without inserting spaces.
- * Special-case: {{#v.1}ing} should turn "start"/"begin" (toggled) into
- * "starting"/"beginning" (opposite gerund), per your clarified pairing:
- *  - begin -> starting
- *  - start -> beginning
+ * Glue: renders inner without inserting spaces.
+ * Special-case: {{#v.1}ing} should yield:
+ *   - if binder chose "begin" => "starting"
+ *   - if binder chose "start" => "beginning"
  */
-function renderGlue(inner: AstNode[], ctx: RenderContext): string {
+function renderGlue(inner, ctx) {
   // Pattern: [bindRef(other), text("ing")]
   if (
     inner.length === 2 &&
@@ -525,17 +471,17 @@ function renderGlue(inner: AstNode[], ctx: RenderContext): string {
     return toIng(other);
   }
 
-  // Generic glue: render to tokens, then concatenate
-  const tmp: string[] = [];
+  // Generic glue: render to tokens then concat
+  const tmp = [];
   renderSeq(inner, ctx, tmp);
   return tmp.join("");
 }
 
-function toIng(word: string): string {
+function toIng(word) {
   const w = String(word ?? "");
   const lower = w.toLowerCase();
 
-  // Minimal irregulars to satisfy your exact "start/begin" case
+  // Minimal irregulars for your start/begin pairing
   if (lower === "begin") return matchCase(w, "beginning");
   if (lower === "start") return matchCase(w, "starting");
 
@@ -545,19 +491,19 @@ function toIng(word: string): string {
   return matchCase(w, lower + "ing");
 }
 
-function matchCase(src: string, out: string): string {
+function matchCase(src, out) {
   if (/^[A-Z]/.test(src)) return out[0].toUpperCase() + out.slice(1);
   return out;
 }
 
-function pushTokens(tokens: string[], raw: unknown): void {
+function pushTokens(tokens, raw) {
   if (raw == null) return;
   const str = String(raw);
   const parts = str.split(/(\s+)/).filter((p) => p && !/^\s+$/.test(p));
   for (const p of parts) tokens.push(p);
 }
 
-function joinTokens(tokens: string[]): string {
+function joinTokens(tokens) {
   let out = "";
   for (const t of tokens) {
     if (!t) continue;
@@ -573,7 +519,7 @@ function joinTokens(tokens: string[]): string {
 }
 
 /* =========================
- * Example (for testing)
+ * Quick smoke test (optional)
  * =========================
  *
  * const outline = `
@@ -585,13 +531,13 @@ function joinTokens(tokens: string[]): string {
  *     - users can {#v{start|begin} playing|play} \`${Subject}\` as part of their subscriptions {{#v.1}ing} today.
  * - The Xbox Game Pass {content}? {catalog|library}
  *     - has expanded to include \`${Subject}\`
- *     - includes \`${Subject}\` {beginning|starting} today.
+ *     - includes \`${Subject}\` {as of|starting} today.
  *     - now includes \`${Subject}\`
  *         - {, which joined the service earlier today}
  * `;
  *
  * const prog = parseTemplateOutline(outline);
- * console.log(prog.args);      // { Subject: null }
- * console.log(prog.variance);  // total permutations
- * console.log(prog.write({ Subject: "Clair Obscur: Expedition 33" }));
+ * console.log(prog.args);     // { Subject: null }
+ * console.log(prog.variance); // number
+ * console.log(prog.write({ Subject: "Kingdom Come: Deliverance 2" }));
  */
