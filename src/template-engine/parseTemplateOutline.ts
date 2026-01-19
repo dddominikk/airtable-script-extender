@@ -16,7 +16,7 @@
  *  - Final output collapses whitespace with /\s+/g => " " and trims.
  */
 
-export function parseTemplateOutline(outlineText: string, { rng = Math.random } = {}) {
+export function parseTemplateOutline(outlineText, { rng = Math.random } = {}) {
   const root = parseOutline(outlineText);
   const templateStrings = expandOutline(root);
 
