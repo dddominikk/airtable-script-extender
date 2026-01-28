@@ -10,6 +10,7 @@ export function currentTimeContext() {
         utcString: D.toUTCString(),
         utcMonth: D.getUTCMonth(),
         monthName: D.toLocaleString('friendly', { month: 'long' }),
+        twoDigitDay: D.toLocaleString('friendly', { day: '2-digit' }),
         hours: D.getHours(),
         utcHours: D.getUTCHours(),
         minutes: D.getMinutes(),
