@@ -1,3 +1,8 @@
+/**
+ * @arg {AirtableRecord} r
+ * @arg {Table} table
+ * @arg {Record<string,{condition: (F:Field) => boolean, process: (r) => unknown }>} [schema]
+ */
 export function loadRecordCellValues(r: AirtableRecord, table, schema) {
 
     const DEFAULT_SCHEMA = {
@@ -63,8 +68,4 @@ export function loadRecordCellValues(r: AirtableRecord, table, schema) {
 
 type AirtableRecord = {id: string, name: string} & Object;
 
-/**
- * @arg {AirtableRecord} r
- * @arg {Table} table
- * @arg {Record<string,{condition: (F:Field) => boolean, process: (r) => unknown }>} [schema]
- */
+
