@@ -1,10 +1,10 @@
 /** @type fullRecordSelector */
 export async function selectFullRecordsAsync(root, options = {}) {
-    let b = base ?? this.base;
+    let thisBase = base ?? this?.base;
 
     const { recordIds, fields: fieldsToLoad, ...rest } = options;
-    const B = !!base && typeof base === 'object'
-        ? base
+    const B = !!thisBase && typeof thisBase === 'object'
+        ? thisBase
         : this?.base ?? new TypeError(`The base object isn't `);
 
 
