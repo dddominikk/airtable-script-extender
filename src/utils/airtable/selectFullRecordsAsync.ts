@@ -1,5 +1,6 @@
 /** @type fullRecordSelector */
 export async function selectFullRecordsAsync(root, options = {}) {
+    let b = base ?? this.base;
 
     const { recordIds, fields: fieldsToLoad, ...rest } = options;
     const B = !!base && typeof base === 'object'
