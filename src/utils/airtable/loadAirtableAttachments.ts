@@ -32,7 +32,7 @@ export async function loadAirtableAttachments(/**@type LAAI*/init) {
 
     const results = [];
 
-    this.schema = init?.schema || {};
+    this.schema = schema || {};
 
     const modules = Object.assign(DefaultSchema.modules, this.schema?.modules || {});
     const supportedFileTypes = Object.assign(DefaultSchema.supportedFileTypes, this.schema?.supportedFileTypes || {});
