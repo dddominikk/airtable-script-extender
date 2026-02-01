@@ -15,7 +15,7 @@ export async function loadAirtableAttachments(/**@type LAAI*/init) {
             fetchJson: ({ response }) => response.json(),
             importEsModuleFromAirtableAttachment: ({ response }) => response.text()
                 .then(content => import(`data:application/javascript;base64,${btoa(unescape(encodeURIComponent(content)))}`)),
-            fetchRawText({ response }) => response.text()
+            fetchRawText: ({ response }) => response.text()
         },
 
         supportedFileTypes: {
