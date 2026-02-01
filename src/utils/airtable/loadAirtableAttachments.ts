@@ -14,12 +14,15 @@ export async function loadAirtableAttachments(/**@type LAAI*/init) {
         modules: {
             fetchJson: ({ response }) => response.json(),
             importEsModuleFromAirtableAttachment: ({ response }) => response.text()
-                .then(content => import(`data:application/javascript;base64,${btoa(unescape(encodeURIComponent(content)))}`))
+                .then(content => import(`data:application/javascript;base64,${btoa(unescape(encodeURIComponent(content)))}`)),
+            fetchRawText({ response }) => response.text()
         },
 
         supportedFileTypes: {
             json: 'fetchJson',
-            mjs: 'importEsModuleFromAirtableAttachment'
+            mjs: 'importEsModuleFromAirtableAttachment',
+            sql: 'fetchRawText',
+            txt: 'fetchRawText'
         },
 
         TreatFilesWithoutExtensionAs: 'json'
