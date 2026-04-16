@@ -1,3 +1,9 @@
-export {loadRecordCellValues} from './loadRecordCellValues.ts';
-export {selectFullRecordsAsync} from './selectFullRecordsAsync.ts';
-export {loadAirtableAttachments} from './loadAirtableAttachments.ts';
+export { loadRecordCellValues } from "./loadRecordCellValues.ts";
+export { selectFullRecordsAsync } from "./selectFullRecordsAsync.ts";
+export { loadAirtableAttachments } from "./loadAirtableAttachments.ts";
+export {
+	getDefaultAttachmentLoadSchema,
+	getAttachmentRuntimeModuleCache,
+	getCachedExternalModule,
+	inferAttachmentFileType,
+} from "./attachmentLoadDefaults.ts";
