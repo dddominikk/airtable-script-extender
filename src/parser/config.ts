@@ -1,4 +1,4 @@
-import type { FormatDependency, FormatEntry } from "./types.ts";
+import type { FormatDependency, FormatEntry, ModuleDefinition } from "./types.ts";
 
 export const formatDependencies: Record<string, FormatDependency> = {
   yaml: {
@@ -25,4 +25,20 @@ export const supportedFormats: FormatEntry[] = [
   { key: "javascript", extensions: ["js", "mjs"],               mimeTypes: ["application/javascript", "text/javascript"],                          depKeys: [] },
   { key: "typescript", extensions: ["ts", "tsx", "mts", "cts"], mimeTypes: ["application/typescript", "text/typescript"],                          depKeys: ["typescript"] },
   { key: "text",       extensions: ["txt", "sql", "md"],        mimeTypes: ["text/plain", "text/markdown", "text/x-sql", "application/sql"],       depKeys: [] },
+];
+
+export const supportedModules: ModuleDefinition[] = [
+  {
+    type: "esm",
+    compatibleFormats: ["javascript", "typescript"],
+  },
+  {
+    type: "iife",
+    compatibleFormats: ["javascript", "typescript"],
+  },
+  {
+    type: "script",
+    // TypeScript excluded — importScripts cannot execute raw TS
+    compatibleFormats: ["javascript"],
+  },
 ];

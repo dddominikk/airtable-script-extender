@@ -15,3 +15,11 @@ export interface FormatEntry {
 export type SupportedFormat = string;
 
 export type ParserMap = Record<string, ParserFn>;
+
+export type ModuleType = "esm" | "iife" | "script";
+
+export interface ModuleDefinition {
+  type: ModuleType;
+  /** Format keys from supportedFormats that this module type can execute. */
+  compatibleFormats: string[];
+}
