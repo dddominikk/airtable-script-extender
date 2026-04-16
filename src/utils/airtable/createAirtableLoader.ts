@@ -1,102 +1,111 @@
 import type {
-  AirtableBase,
-  AirtableRecord,
-  AirtableTable
-} from '../types/airtable.ts';
-import { defaultGetterRegistry } from './builtins.ts';
-import { selectTableRecords } from './selectTableRecords.ts';
+	AirtableBase,
+	AirtableTable,
+} from "../types/airtable.ts";
+import {
+	buildDefaultAttachmentContentLoader,
+	defaultGetterRegistry,
+} from "./builtins.ts";
+import { selectTableRecords } from "./selectTableRecords.ts";
 import type {
-  AirtableLoaderOptions,
-  MultiTableSelectQueryMap,
-  TableSelectQuery,
-  TableSelectResult
-} from './types.ts';
+	AirtableLoaderOptions,
+	MultiTableSelectQueryMap,
+	TableSelectQuery,
+	TableSelectResult,
+} from "./types.ts";
 
-function resolveTable<TRecord extends AirtableRecord = AirtableRecord>(
-  base: AirtableBase,
-  tableRef: string | AirtableTable<TRecord>
-): AirtableTable<TRecord> {
-  if (typeof tableRef !== 'string') {
-    return tableRef;
-  }
+function resolveTable(
+	base: AirtableBase,
+	tableRef: string | AirtableTable,
+): AirtableTable {
+	if (typeof tableRef !== "string") {
+		return tableRef;
+	}
 
-  const byName = base.tables.find(
-    table => table.name.toLowerCase() === tableRef.toLowerCase()
-  );
+	const byName = base.tables.find(
+		(table) => table.name.toLowerCase() === tableRef.toLowerCase(),
+	);
 
-  if (byName) {
-    return byName as AirtableTable<TRecord>;
-  }
+	if (byName) {
+		return byName as AirtableTable;
+	}
 
-  throw new Error(`Could not resolve Airtable table: ${tableRef}`);
+	throw new Error(`Could not resolve Airtable table: ${tableRef}`);
 }
 
 export function createAirtableLoader(
-  base: AirtableBase,
-  options: AirtableLoaderOptions = {}
+	base: AirtableBase,
+	options: AirtableLoaderOptions = {},
 ) {
-  const registry = options.registry ?? defaultGetterRegistry();
+	const fetchMethod = options?.fetchMethod ?? fetch;
 
-  return {
-    base,
-    registry,
+	const attachmentContentLoader =
+		options?.attachmentContentLoader ??
+		buildDefaultAttachmentContentLoader({ fetchMethod });
 
-    table<TRecord extends AirtableRecord = AirtableRecord>(
-      tableRef: string | AirtableTable<TRecord>
-    ) {
-      const table = resolveTable(base, tableRef);
+	const registry =
+		options.registry ??
+		defaultGetterRegistry({ attachmentContentLoader });
 
-      return {
-        table,
+	return {
+		base,
+		registry,
+		attachmentContentLoader,
 
-        async select(query: TableSelectQuery = {}): Promise<TableSelectResult<TRecord>> {
-          return await selectTableRecords({
-            base,
-            table,
-            query,
-            registry,
-            defaultGetterModes: options.getterModes
-          });
-        },
+		table(tableRef: string | AirtableTable) {
+			const table = resolveTable(base, tableRef);
 
-        async get(
-          recordId: string,
-          query: Omit<TableSelectQuery, 'recordIds'> = {}
-        ) {
-          const result = await selectTableRecords({
-            base,
-            table,
-            query: { ...query, recordIds: [recordId] },
-            registry,
-            defaultGetterModes: options.getterModes
-          });
+			return {
+				table,
 
-          return result.records[0] ?? null;
-        },
+				async select(query: TableSelectQuery = {}): Promise<TableSelectResult> {
+					return await selectTableRecords({
+						base,
+						table,
+						query,
+						registry,
+						defaultGetterModes: options.getterModes,
+					});
+				},
 
-        async first(query: TableSelectQuery = {}) {
-          const result = await selectTableRecords({
-            base,
-            table,
-            query,
-            registry,
-            defaultGetterModes: options.getterModes
-          });
+				async get(
+					recordId: string,
+					query: Omit<TableSelectQuery, "recordIds"> = {},
+				) {
+					const result = await selectTableRecords({
+						base,
+						table,
+						query: { ...query, recordIds: [recordId] },
+						registry,
+						defaultGetterModes: options.getterModes,
+					});
 
-          return result.records[0] ?? null;
-        }
-      };
-    },
+					return result.records[0] ?? null;
+				},
 
-    async tables(queries: MultiTableSelectQueryMap) {
-      const entries = Object.entries(queries);
-      const result: Record<string, TableSelectResult> = {};
+				async first(query: TableSelectQuery = {}) {
+					const result = await selectTableRecords({
+						base,
+						table,
+						query,
+						registry,
+						defaultGetterModes: options.getterModes,
+					});
 
-      for (const [tableName, query] of entries) {
-        result[tableName] = await this.table(tableName).select(query);
-      }
+					return result.records[0] ?? null;
+				},
+			};
+		},
 
-      return result;
-    }
-  };
+		async tables(queries: MultiTableSelectQueryMap) {
+			const entries = Object.entries(queries);
+			const result: Record<string, TableSelectResult> = {};
+
+			for (const [tableName, query] of entries) {
+				result[tableName] = await this.table(tableName).select(query);
+			}
+
+			return result;
+		},
+	};
 }

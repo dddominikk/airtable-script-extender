@@ -1,4 +1,4 @@
-import type { AirtableAttachment } from "../../types/airtable.ts";
+import type { AirtableAttachment } from "../types/airtable.ts";
 import type {
 	AttachmentContentLoader,
 	CellValueGetterMap,
