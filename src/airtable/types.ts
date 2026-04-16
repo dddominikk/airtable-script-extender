@@ -119,9 +119,7 @@ export interface MultiTableSelectQueryMap {
 	[tableName: string]: TableSelectQuery;
 }
 
-export type AttachmentContentLoader = (
-	attachment: AirtableAttachment,
-) => Promise<unknown>;
+export type { AttachmentContentLoader } from "../attachment-loader/types.ts";
 
 export interface AirtableLoaderOptions {
 	registry?: GetterRegistry;

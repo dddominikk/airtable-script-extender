@@ -25,6 +25,7 @@ export async function loadRecordModel<TRecord extends AirtableRecord = AirtableR
     defaultGetterModes?: Record<string, GetterModeSelection>;
   }
 ): Promise<LoadedRecordModel<TRecord>> {
+
   const {
     base,
     table,
