@@ -1,2 +1,2 @@
 export { buildAttachmentLoader, buildAttachmentLoaderFromOptions, getAttachmentExtension } from "./loadAttachment.ts";
-export type { AttachmentContentLoader, AttachmentLoaderOptions } from "./types.ts";
+export type { AttachmentContentLoader, AttachmentLoaderOptions, LoadedAttachment } from "./types.ts";

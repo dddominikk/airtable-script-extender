@@ -8,6 +8,7 @@ export interface FormatDependency {
 export interface FormatEntry {
   key: string;
   extensions: string[];
+  mimeTypes: string[];
   depKeys: string[];
 }
 

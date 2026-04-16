@@ -1,19 +1,14 @@
+import type { AirtableBase, AirtableRecord, AirtableTable } from "../airtable-types.ts";
+import type { GetterModeSelection, GetterRegistry } from "../cell-reader/types.ts";
+import { evaluateGetterMode } from "../cell-reader/evaluateGetterMode.ts";
+import { resolveGetterModeSelection } from "../cell-reader/resolveGetterMode.ts";
+import { getSelectedFields } from "./getSelectedFields.ts";
+import { loadPrimitiveCellReads } from "./loadPrimitiveCellReads.ts";
 import type {
-  AirtableBase,
-  AirtableRecord,
-  AirtableTable
-} from '../types/airtable.ts';
-import { evaluateGetterMode } from './evaluateGetterMode.ts';
-import { getSelectedFields } from './getSelectedFields.ts';
-import { loadPrimitiveCellReads } from './loadPrimitiveCellReads.ts';
-import { resolveGetterModeSelection } from './resolveGetterMode.ts';
-import type {
-  GetterModeSelection,
-  GetterRegistry,
   LoadedRecordModel,
   PrimitivePolicy,
-  TableSelectQuery
-} from './types.ts';
+  TableSelectQuery,
+} from "./types.ts";
 
 export async function loadRecordModel<TRecord extends AirtableRecord = AirtableRecord>(
   params: {
@@ -23,19 +18,11 @@ export async function loadRecordModel<TRecord extends AirtableRecord = AirtableR
     registry: GetterRegistry;
     query?: TableSelectQuery;
     defaultGetterModes?: Record<string, GetterModeSelection>;
-  }
+  },
 ): Promise<LoadedRecordModel<TRecord>> {
+  const { base, table, record, registry, query, defaultGetterModes } = params;
 
-  const {
-    base,
-    table,
-    record,
-    registry,
-    query,
-    defaultGetterModes
-  } = params;
-
-  const primitivePolicy: PrimitivePolicy = query?.primitivePolicy ?? 'minimal';
+  const primitivePolicy: PrimitivePolicy = query?.primitivePolicy ?? "minimal";
   const selectedFields = getSelectedFields(table, query?.fields);
 
   const loaded: LoadedRecordModel<TRecord> = {
@@ -47,9 +34,9 @@ export async function loadRecordModel<TRecord extends AirtableRecord = AirtableR
       values: {},
       strings: {},
       getters: Object.fromEntries(
-        Object.keys(registry.getters).map(key => [key, {} as Record<string, unknown>])
-      )
-    }
+        Object.keys(registry.getters).map((key) => [key, {} as Record<string, unknown>]),
+      ),
+    },
   };
 
   for (const entry of selectedFields) {
@@ -61,14 +48,14 @@ export async function loadRecordModel<TRecord extends AirtableRecord = AirtableR
         getter,
         config.getters,
         query?.getterModes ?? defaultGetterModes,
-        registry.modes
+        registry.modes,
       );
 
       const matches = await evaluateGetterMode(mode, registry.checks, {
         field,
         record,
         table,
-        base
+        base,
       });
 
       if (matches) {
@@ -76,14 +63,14 @@ export async function loadRecordModel<TRecord extends AirtableRecord = AirtableR
       }
     }
 
-    const primitiveNeeds = new Set<'value' | 'string'>();
+    const primitiveNeeds = new Set<"value" | "string">();
 
-    if (primitivePolicy === 'full' || config.value) {
-      primitiveNeeds.add('value');
+    if (primitivePolicy === "full" || config.value) {
+      primitiveNeeds.add("value");
     }
 
-    if (primitivePolicy === 'full' || config.string) {
-      primitiveNeeds.add('string');
+    if (primitivePolicy === "full" || config.string) {
+      primitiveNeeds.add("string");
     }
 
     for (const { getter } of activeGetterEntries) {
@@ -94,12 +81,12 @@ export async function loadRecordModel<TRecord extends AirtableRecord = AirtableR
 
     const reads = loadPrimitiveCellReads(record, field, primitiveNeeds);
 
-    if (primitiveNeeds.has('value')) {
+    if (primitiveNeeds.has("value")) {
       loaded.cells.values[field.name] = reads.value;
     }
 
-    if (primitiveNeeds.has('string')) {
-      loaded.cells.strings[field.name] = reads.string ?? '';
+    if (primitiveNeeds.has("string")) {
+      loaded.cells.strings[field.name] = reads.string ?? "";
     }
 
     for (const { getter } of activeGetterEntries) {
@@ -108,7 +95,7 @@ export async function loadRecordModel<TRecord extends AirtableRecord = AirtableR
         record,
         table,
         base,
-        reads
+        reads,
       });
     }
   }

@@ -16,13 +16,13 @@ export const formatDependencies: Record<string, FormatDependency> = {
 };
 
 export const supportedFormats: FormatEntry[] = [
-  { key: "json",       extensions: ["json"],              depKeys: [] },
-  { key: "jsonl",      extensions: ["jsonl", "ndjson"],   depKeys: [] },
-  { key: "jsonc",      extensions: ["jsonc"],             depKeys: ["jsonc-parser"] },
-  { key: "yaml",       extensions: ["yaml", "yml"],       depKeys: ["yaml"] },
-  { key: "toml",       extensions: ["toml"],              depKeys: ["toml"] },
-  { key: "csv",        extensions: ["csv"],               depKeys: [] },
-  { key: "javascript", extensions: ["js", "mjs"],         depKeys: [] },
-  { key: "typescript", extensions: ["ts", "tsx", "mts", "cts"], depKeys: ["typescript"] },
-  { key: "text",       extensions: ["txt", "sql", "md"],  depKeys: [] },
+  { key: "json",       extensions: ["json"],                    mimeTypes: ["application/json"],                                                   depKeys: [] },
+  { key: "jsonl",      extensions: ["jsonl", "ndjson"],         mimeTypes: ["application/x-ndjson", "application/jsonl"],                          depKeys: [] },
+  { key: "jsonc",      extensions: ["jsonc"],                   mimeTypes: ["application/jsonc"],                                                   depKeys: ["jsonc-parser"] },
+  { key: "yaml",       extensions: ["yaml", "yml"],             mimeTypes: ["application/yaml", "text/yaml", "application/x-yaml"],                depKeys: ["yaml"] },
+  { key: "toml",       extensions: ["toml"],                    mimeTypes: ["application/toml"],                                                    depKeys: ["toml"] },
+  { key: "csv",        extensions: ["csv"],                     mimeTypes: ["text/csv"],                                                            depKeys: [] },
+  { key: "javascript", extensions: ["js", "mjs"],               mimeTypes: ["application/javascript", "text/javascript"],                          depKeys: [] },
+  { key: "typescript", extensions: ["ts", "tsx", "mts", "cts"], mimeTypes: ["application/typescript", "text/typescript"],                          depKeys: ["typescript"] },
+  { key: "text",       extensions: ["txt", "sql", "md"],        mimeTypes: ["text/plain", "text/markdown", "text/x-sql", "application/sql"],       depKeys: [] },
 ];

@@ -1,16 +1,8 @@
-import type {
-  AirtableBase,
-  AirtableRecord,
-  AirtableTable
-} from '../types/airtable.ts';
-import { getSelectedFields } from './getSelectedFields.ts';
-import { loadRecordModel } from './loadRecordModel.ts';
-import type {
-  GetterModeSelection,
-  GetterRegistry,
-  TableSelectQuery,
-  TableSelectResult
-} from './types.ts';
+import type { AirtableBase, AirtableRecord, AirtableTable } from "../airtable-types.ts";
+import type { GetterModeSelection, GetterRegistry } from "../cell-reader/types.ts";
+import { getSelectedFields } from "./getSelectedFields.ts";
+import { loadRecordModel } from "./loadRecordModel.ts";
+import type { TableSelectQuery, TableSelectResult } from "./types.ts";
 
 export async function selectTableRecords<TRecord extends AirtableRecord = AirtableRecord>(
   params: {
@@ -19,15 +11,15 @@ export async function selectTableRecords<TRecord extends AirtableRecord = Airtab
     query?: TableSelectQuery;
     registry: GetterRegistry;
     defaultGetterModes?: Record<string, GetterModeSelection>;
-  }
+  },
 ): Promise<TableSelectResult<TRecord>> {
   const { base, table, query, registry, defaultGetterModes } = params;
-  const selectedFields = getSelectedFields(table, query?.fields).map(entry => entry.field);
+  const selectedFields = getSelectedFields(table, query?.fields).map((entry) => entry.field);
 
   const result = await table.selectRecordsAsync({
     recordIds: query?.recordIds,
     fields: selectedFields.length ? selectedFields : undefined,
-    view: query?.view
+    view: query?.view,
   });
 
   const records = [];
@@ -39,13 +31,10 @@ export async function selectTableRecords<TRecord extends AirtableRecord = Airtab
         record,
         registry,
         query,
-        defaultGetterModes
-      })
+        defaultGetterModes,
+      }),
     );
   }
 
-  return {
-    table,
-    records
-  };
+  return { table, records };
 }
