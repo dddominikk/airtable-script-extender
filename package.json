@@ -1,0 +1,30 @@
+{
+  "name": "airtable-script-extender",
+  "version": "2.0.0",
+  "description": "Extending the functionality of the Airtable Scripting Extension.",
+  "homepage": "https://github.com/dddominikk/airtable-script-extender#readme",
+  "bugs": {
+    "url": "https://github.com/dddominikk/airtable-script-extender/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dddominikk/airtable-script-extender.git"
+  },
+  "license": "MIT",
+  "author": "Dominik Bošnjak",
+  "type": "module",
+  "main": "src/index.ts",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "tsx --test tests/**/*.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^6.0.2"
+  }
+}
