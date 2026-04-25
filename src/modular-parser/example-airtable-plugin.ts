@@ -44,7 +44,6 @@ interface EnrichedRecord {
 
 /** Minimal interface for an Airtable Base, enough for getTable. */
 interface AirtableTable {
-  primaryField: { name: string };
   selectRecordsAsync: (opts: { fields: string[] }) => Promise<{
     records: Array<{
       id:           string;
@@ -80,9 +79,11 @@ interface LoadOptions {
 
   /**
    * DataParser instances that should be considered.
-   * You can pass a subset of DataParser.s rather than the whole registry.
+   * Defaults to every parser currently registered in `DataParser.s` when omitted,
+   * so you can rely on the registry alone without passing plugins explicitly.
+   * Pass an explicit subset to restrict which parsers are active for this call.
    */
-  plugins: DataParser[];
+  plugins?: DataParser[];
 
   /**
    * PathResolver used to fetch attachment URLs.
@@ -120,7 +121,7 @@ export async function loadAndParseAttachments(
     attachmentFieldNameOrIds,
     parsedFileProp,
     recordIds,
-    plugins,
+    plugins = Object.values(DataParser.s),
     resolver = defaultResolver,
     base: baseOverride,
   } = options;
@@ -131,11 +132,10 @@ export async function loadAndParseAttachments(
   const activeBase: { getTable: (nameOrId: string) => AirtableTable } = baseOverride ?? base;
   const table = activeBase.getTable(tableNameOrId);
 
+  // `record.name` in the scripting API always reflects the primary field value
+  // regardless of which fields are selected — no need to include it here.
   const query = await table.selectRecordsAsync({
-    fields: [
-      table.primaryField.name,
-      ...attachmentFieldNameOrIds,
-    ],
+    fields: attachmentFieldNameOrIds,
   });
 
   // -- 2. Filter to requested record IDs when provided --
