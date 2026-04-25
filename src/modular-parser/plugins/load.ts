@@ -59,6 +59,7 @@ export async function loadPlugins(entries: PluginEntry[]): Promise<LoadedPlugin[
       switch (entry.type) {
         case 'parser': {
           const config = mod.default as PluginConfig;
+          await config.init?.();
           return {
             type:     'parser',
             name:     key,
@@ -71,6 +72,7 @@ export async function loadPlugins(entries: PluginEntry[]): Promise<LoadedPlugin[
 
         case 'pathResolver': {
           const config = mod.default as PathResolverConfig;
+          await config.init?.();
           return {
             type:     'pathResolver',
             name:     key,
@@ -79,10 +81,12 @@ export async function loadPlugins(entries: PluginEntry[]): Promise<LoadedPlugin[
         }
 
         case 'custom': {
+          const config = mod.default as Record<string, unknown> & { init?: () => Promise<void> | void };
+          await config.init?.();
           return {
             type:     'custom',
             name:     key,
-            instance: mod.default as Record<string, unknown>,
+            instance: config,
           };
         }
       }

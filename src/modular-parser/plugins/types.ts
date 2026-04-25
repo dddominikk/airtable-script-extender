@@ -20,6 +20,8 @@ export interface PluginConfig<T = unknown> {
     extensions?: string[];
     mimeTypes?:  string[];
   };
+  /** Called once by loadPlugins before the DataParser instance is created. */
+  init?: () => Promise<void> | void;
 }
 
 // ---------------------------------------------------------------------------
@@ -30,6 +32,8 @@ export interface PathResolverConfig<R = string> {
   name:       string;
   resolve:    ResolveFn<R>;
   transform?: TransformFn<R>;
+  /** Called once by loadPlugins before the PathResolver instance is created. */
+  init?: () => Promise<void> | void;
 }
 
 // ---------------------------------------------------------------------------
