@@ -25,9 +25,9 @@ import loadPlugins from "./load.ts";
 
 /*  esm-parser for Airtable would need a wrapper */
 const plugins = await loadPlugins([
-  { type: 'parser', name: 'json-parser' },
-  { type: 'parser', name: 'mjs-parser'  },
-  {type: 'pathResolver',name: }
+	{ type: "parser", name: "json-parser" },
+	{ type: "parser", name: "mjs-parser" },
+	{ type: "pathResolver", name: "url-resolver" },
 ]);
 
 export { DataParser, loadPlugins, plugins };
