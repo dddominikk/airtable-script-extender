@@ -65,7 +65,7 @@ export async function loadPlugins(
 					return {
 						type: "parser",
 						name: key,
-            config,
+
 						instance: new DataParser(config.parser, {
 							name: config.parser.name || key,
 							supports: config.supports,
@@ -113,4 +113,5 @@ export type {
 	PluginEntry,
 	LoadedPlugin,
 } from "./types.ts";
+
 export default loadPlugins;
