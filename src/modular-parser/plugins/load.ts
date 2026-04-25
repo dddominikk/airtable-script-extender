@@ -65,8 +65,7 @@ export async function loadPlugins(
 					return {
 						type: "parser",
 						name: key,
-            supports?:config?.supports ,
-
+            config,
 						instance: new DataParser(config.parser, {
 							name: config.parser.name || key,
 							supports: config.supports,
