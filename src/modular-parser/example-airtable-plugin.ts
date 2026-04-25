@@ -33,13 +33,13 @@ interface AirtableAttachment {
   filename: string;
   type:     string;   // MIME type, e.g. "application/json"
   size:     number;
+  [key: string]: unknown;  // holds parsedFileProp stamped in-place
 }
 
 interface EnrichedRecord {
-  id:          string;
-  name:        string;
-  attFields:   Record<string, AirtableAttachment[]>;
-  [key: string]: unknown;   // holds `parsedFileProp` dynamically
+  id:        string;
+  name:      string;
+  attFields: Record<string, AirtableAttachment[]>;
 }
 
 /** Minimal interface for an Airtable Base, enough for getTable. */
@@ -147,11 +147,11 @@ export async function loadAndParseAttachments(
   const enriched: EnrichedRecord[] = await Promise.all(
     records.map(async (record) => {
       const attFields: Record<string, AirtableAttachment[]> = {};
-      const parsed:    Record<string, unknown>               = {};
 
       for (const fieldName of attachmentFieldNameOrIds) {
+        // Shallow-copy each attachment so we don't mutate the Airtable record object.
         const attachments: AirtableAttachment[] =
-          record.getCellValue(fieldName) ?? [];
+          (record.getCellValue(fieldName) ?? []).map((att) => ({ ...att }));
 
         attFields[fieldName] = attachments;
 
@@ -173,7 +173,8 @@ export async function loadAndParseAttachments(
               }
 
               const bodyText = await response.text();
-              parsed[att.id] = await parseRaw(bodyText, parser.parser);
+              // Stamp the parsed result directly onto the attachment object.
+              att[parsedFileProp] = await parseRaw(bodyText, parser.parser);
             } catch (err) {
               console.error(
                 `[loadAndParseAttachments] Failed to parse attachment`,
@@ -186,10 +187,9 @@ export async function loadAndParseAttachments(
       }
 
       return {
-        id:           record.id,
-        name:         record.name,
+        id:   record.id,
+        name: record.name,
         attFields,
-        [parsedFileProp]: parsed,
       };
     })
   );
