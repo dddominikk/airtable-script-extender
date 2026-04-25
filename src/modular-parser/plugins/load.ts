@@ -15,14 +15,14 @@
  * automatically — no changes to this file needed.
  */
 
-import { DataParser }    from '../DataParser.ts';
-import { PathResolver }  from '../PathResolver.ts';
+import { DataParser } from "../DataParser.ts";
+import { PathResolver } from "../PathResolver.ts";
 import {
-  type PluginConfig,
-  type PathResolverConfig,
-  type PluginEntry,
-  type LoadedPlugin,
-} from './types.ts';
+	type PluginConfig,
+	type PathResolverConfig,
+	type PluginEntry,
+	type LoadedPlugin,
+} from "./types.ts";
 
 // ---------------------------------------------------------------------------
 // loadPlugins
@@ -50,53 +50,68 @@ import {
  *   if (p.type === 'custom')       console.log(p.instance);        // raw export
  * }
  */
-export async function loadPlugins(entries: PluginEntry[]): Promise<LoadedPlugin[]> {
-  return Promise.all(
-    entries.map(async (entry): Promise<LoadedPlugin> => {
-      const key = entry.name ?? entry.dir;
-      const mod = await import(`./${entry.dir}/index.ts`);
+export async function loadPlugins(
+	entries: PluginEntry[],
+): Promise<LoadedPlugin[]> {
+	return Promise.all(
+		entries.map(async (entry): Promise<LoadedPlugin> => {
+			const key = entry.name ?? entry.dir;
+			const mod = await import(`./${entry.dir}/index.ts`);
 
-      switch (entry.type) {
-        case 'parser': {
-          const config = mod.default as PluginConfig;
-          await config.init?.();
-          return {
-            type:     'parser',
-            name:     key,
-            instance: new DataParser(config.parser, {
-              name:     config.parser.name || key,
-              supports: config.supports,
-            }),
-          };
-        }
+			switch (entry.type) {
+				case "parser": {
+					const config = mod.default as PluginConfig;
+					await config.init?.();
+					return {
+						type: "parser",
+						name: key,
+            supports?:config?.supports ,
 
-        case 'pathResolver': {
-          const config = mod.default as PathResolverConfig;
-          await config.init?.();
-          return {
-            type:     'pathResolver',
-            name:     key,
-            instance: new PathResolver(config.name, config.resolve, config.transform),
-          };
-        }
+						instance: new DataParser(config.parser, {
+							name: config.parser.name || key,
+							supports: config.supports,
+						}),
+					};
+				}
 
-        case 'custom': {
-          const config = mod.default as Record<string, unknown> & { init?: () => Promise<void> | void };
-          await config.init?.();
-          return {
-            type:     'custom',
-            name:     key,
-            instance: config,
-          };
-        }
-      }
-    })
-  );
+				case "pathResolver": {
+					const config = mod.default as PathResolverConfig;
+					await config.init?.();
+					return {
+						type: "pathResolver",
+						name: key,
+						instance: new PathResolver(
+							config.name,
+							config.resolve,
+							config.transform,
+						),
+					};
+				}
+
+				case "custom": {
+					const config = mod.default as Record<string, unknown> & {
+						init?: () => Promise<void> | void;
+					};
+					await config.init?.();
+					return {
+						type: "custom",
+						name: key,
+						instance: config,
+					};
+				}
+			}
+		}),
+	);
 }
 
 // ---------------------------------------------------------------------------
 // Re-export types so callers only need to import from 'plugins/load.ts'
 // ---------------------------------------------------------------------------
 
-export type { PluginConfig, PathResolverConfig, PluginEntry, LoadedPlugin } from './types.ts';
+export type {
+	PluginConfig,
+	PathResolverConfig,
+	PluginEntry,
+	LoadedPlugin,
+} from "./types.ts";
 export default loadPlugins;
