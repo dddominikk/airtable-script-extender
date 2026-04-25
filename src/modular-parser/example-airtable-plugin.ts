@@ -18,9 +18,9 @@
  * them via a bundled script block.
  */
 
-import { DataParser }   from './DataParser.js';
-import { PathResolver } from './PathResolver.js';
-import { parseRaw }     from './parseRawData.js';
+import { DataParser }        from './DataParser.js';
+import { PathResolver }      from './PathResolver.js';
+import { parseRaw }          from './parseRawData.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -78,12 +78,11 @@ interface LoadOptions {
   recordIds?: string[];
 
   /**
-   * DataParser instances that should be considered.
-   * Defaults to every parser currently registered in `DataParser.s` when omitted,
-   * so you can rely on the registry alone without passing plugins explicitly.
-   * Pass an explicit subset to restrict which parsers are active for this call.
+   * DataParser instances, or the full LoadedPlugin array returned by loadPlugins().
+   * Non-parser entries in a LoadedPlugin array are silently ignored.
+   * Defaults to every parser currently registered in `DataParser.s` when omitted.
    */
-  plugins?: DataParser[];
+  plugins?: DataParser[] | Array<{ type: string; instance: unknown }>;
 
   /**
    * PathResolver used to fetch attachment URLs.
@@ -121,10 +120,14 @@ export async function loadAndParseAttachments(
     attachmentFieldNameOrIds,
     parsedFileProp,
     recordIds,
-    plugins = Object.values(DataParser.s),
+    plugins: rawPlugins = Object.values(DataParser.s),
     resolver = defaultResolver,
     base: baseOverride,
   } = options;
+
+  const plugins: DataParser[] = rawPlugins.flatMap((p) =>
+    p instanceof DataParser ? [p] : (p as { type: string; instance: unknown }).type === 'parser' ? [(p as { instance: DataParser }).instance] : []
+  );
 
   // -- 1. Airtable API surface --
   // Prefer the explicitly passed `base`; fall back to the scripting runtime global.
