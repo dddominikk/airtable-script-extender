@@ -5,7 +5,7 @@
  * Each `plugins/{name}/index.ts` default-exports one of these.
  */
 
-import { type RawInput } from '../parseRawData.js';
+import { type RawInput } from '../parseRawData.ts';
 
 export interface PluginConfig<T = unknown> {
   /**
