@@ -98,6 +98,10 @@ export async function loadPlugins(
 						instance: config,
 					};
 				}
+
+        default: {
+          
+        }
 			}
 		}),
 	);

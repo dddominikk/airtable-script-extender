@@ -34,5 +34,6 @@ export function urlResolver<R = string>(
 
 export default new UrlResolver(
 	"urlResolver",
-	async (url) => fetch(url).then((r) => r.text()),
+	type:'pathResolver',
+	instance: async (url) => fetch(url).then((r) => r.text()),
 );
