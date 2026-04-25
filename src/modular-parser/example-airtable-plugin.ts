@@ -18,9 +18,9 @@
  * them via a bundled script block.
  */
 
-import { DataParser }   from './DataParser.ts';
-import { PathResolver } from './PathResolver.ts';
-import { parseRaw }     from './parseRawData.ts';
+import { DataParser }   from './DataParser.js';
+import { PathResolver } from './PathResolver.js';
+import { parseRaw }     from './parseRawData.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -40,6 +40,18 @@ interface EnrichedRecord {
   name:        string;
   attFields:   Record<string, AirtableAttachment[]>;
   [key: string]: unknown;   // holds `parsedFileProp` dynamically
+}
+
+/** Minimal interface for an Airtable Base, enough for getTable. */
+interface AirtableTable {
+  primaryField: { name: string };
+  selectRecordsAsync: (opts: { fields: string[] }) => Promise<{
+    records: Array<{
+      id:           string;
+      name:         string;
+      getCellValue: (fieldName: string) => AirtableAttachment[] | null;
+    }>;
+  }>;
 }
 
 interface LoadOptions {
@@ -77,6 +89,14 @@ interface LoadOptions {
    * Defaults to a plain `fetch` resolver when not provided.
    */
   resolver?: PathResolver<Response>;
+
+  /**
+   * Airtable base instance to use.
+   * Defaults to the `base` global injected by the scripting runtime.
+   * Pass an explicit value when calling from outside the default scripting
+   * context, e.g. from a different extension or a test harness.
+   */
+  base?: { getTable: (nameOrId: string) => AirtableTable };
 }
 
 // ---------------------------------------------------------------------------
@@ -102,11 +122,14 @@ export async function loadAndParseAttachments(
     recordIds,
     plugins,
     resolver = defaultResolver,
+    base: baseOverride,
   } = options;
 
-  // -- 1. Airtable API surface (available in the scripting extension global) --
-  // @ts-ignore — `base` is a global provided by the Airtable scripting runtime
-  const table = base.getTable(tableNameOrId);
+  // -- 1. Airtable API surface --
+  // Prefer the explicitly passed `base`; fall back to the scripting runtime global.
+  // @ts-ignore — `base` global is injected by the Airtable scripting runtime
+  const activeBase: { getTable: (nameOrId: string) => AirtableTable } = baseOverride ?? base;
+  const table = activeBase.getTable(tableNameOrId);
 
   const query = await table.selectRecordsAsync({
     fields: [
@@ -122,11 +145,7 @@ export async function loadAndParseAttachments(
 
   // -- 3. Build an enriched result per record --
   const enriched: EnrichedRecord[] = await Promise.all(
-    records.map(async (record: {
-      id:   string;
-      name: string;
-      getCellValue: (fieldName: string) => AirtableAttachment[] | null;
-    }) => {
+    records.map(async (record) => {
       const attFields: Record<string, AirtableAttachment[]> = {};
       const parsed:    Record<string, unknown>               = {};
 

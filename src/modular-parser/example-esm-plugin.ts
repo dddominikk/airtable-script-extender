@@ -8,9 +8,9 @@
  * data: URL imports (modern browsers, Deno, some Node flags).
  */
 
-import { DataParser }   from './DataParser.ts';
-import { PathResolver } from './PathResolver.ts';
-import { parseRaw }     from './parseRawData.ts';
+import { DataParser }   from './DataParser.js';
+import { PathResolver } from './PathResolver.js';
+import { parseRaw }     from './parseRawData.js';
 
 // ---------------------------------------------------------------------------
 // 1. PathResolver — wraps fetch, carries the raw Response object through
@@ -20,10 +20,36 @@ import { parseRaw }     from './parseRawData.ts';
  * Resolves a URL to its raw fetch Response.
  * We keep the full Response so the DataParser can inspect headers (MIME type)
  * before deciding how to parse the body.
+ *
+ * The optional `transform` callback can pre-process the Response — for
+ * example, to unwrap it to text, validate status, or attach extra metadata —
+ * before `resolvePath` / `resolvePaths` returns it to the caller.
+ *
+ * @example — unwrap to text immediately
+ * const textResolver = new PathResolver(
+ *   'urlResolver',
+ *   (url) => fetch(url),
+ *   (response) => response.text(),
+ * );
+ *
+ * @example — validate status before handing the Response on
+ * const strictResolver = new PathResolver<Response>(
+ *   'urlResolver',
+ *   (url) => fetch(url),
+ *   (response, path) => {
+ *     if (!response.ok) throw new Error(`HTTP ${response.status}: ${path}`);
+ *     return response;
+ *   },
+ * );
  */
 export const urlResolver = new PathResolver<Response>(
   'urlResolver',
-  (url) => fetch(url)
+  (url) => fetch(url),
+  // Default: validate status so callers never receive a non-OK Response.
+  (response, path) => {
+    if (!response.ok) throw new Error(`[urlResolver] HTTP ${response.status}: ${path}`);
+    return response;
+  }
 );
 
 // ---------------------------------------------------------------------------
@@ -66,11 +92,8 @@ export const esmParser = new DataParser(importEsmFromText, {
 export async function fetchAndParse(url: string): Promise<unknown> {
   const { raw: response, path } = await urlResolver.resolvePath({ path: url });
 
-  if (!response.ok) {
-    throw new Error(`fetchAndParse: HTTP ${response.status} for ${path}`);
-  }
-
-  const mimeType  = (response.headers.get('content-type') ?? '').split(';')[0].trim();
+  // urlResolver's transform already throws on non-OK status.
+  const mimeType = (response.headers.get('content-type') ?? '').split(';')[0].trim();
   const parser    = DataParser.find(mimeType);
 
   if (!parser) {

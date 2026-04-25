@@ -22,27 +22,49 @@ export type ResolvedPath<R = string> = {
 /** Any async function that takes a path string and returns something. */
 export type ResolveFn<R = string> = (path: string) => Promise<R>;
 
+/**
+ * Optional post-resolve transform applied to the raw value before it is
+ * returned from `resolvePath` / `resolvePaths`.
+ * Can be sync or async; always awaited internally.
+ */
+export type TransformFn<R = string> = (raw: R, path: string) => R | Promise<R>;
+
 // ---------------------------------------------------------------------------
 // PathResolver
 // ---------------------------------------------------------------------------
 
 export class PathResolver<R = string> {
   readonly name: string;
-  private readonly _resolve: ResolveFn<R>;
+  private readonly _resolve:   ResolveFn<R>;
+  private readonly _transform: TransformFn<R> | undefined;
 
   /**
-   * @param name     - Human-readable identifier for this resolver.
-   * @param resolve  - Async function that maps a path string to a raw value.
+   * @param name      - Human-readable identifier for this resolver.
+   * @param resolve   - Async function that maps a path string to a raw value.
+   * @param transform - Optional callback invoked on the raw value before it is
+   *                    returned. Receives `(raw, path)` so the transform can
+   *                    branch on the originating path if needed.
    *
    * @example
-   * const resolveUrl = new PathResolver('remotePath', async (url) => {
-   *   const res = await fetch(url);
-   *   return res.text();
-   * });
+   * // Strip BOM from every file read by this resolver
+   * const fileResolver = new PathResolver(
+   *   'fileResolver',
+   *   (p) => fs.promises.readFile(p, 'utf8'),
+   *   (raw) => (raw as string).replace(/^\uFEFF/, '') as R,
+   * );
+   *
+   * @example
+   * // Unwrap fetch → text so callers always receive a string
+   * const urlResolver = new PathResolver(
+   *   'urlResolver',
+   *   (url) => fetch(url),
+   *   (response) => response.text(),
+   * );
    */
-  constructor(name: string, resolve: ResolveFn<R>) {
-    this.name     = name;
-    this._resolve = resolve;
+  constructor(name: string, resolve: ResolveFn<R>, transform?: TransformFn<R>) {
+    this.name       = name;
+    this._resolve   = resolve;
+    this._transform = transform;
   }
 
   // -------------------------------------------------------------------------
@@ -56,7 +78,10 @@ export class PathResolver<R = string> {
    * const { raw, path } = await resolver.resolvePath({ path: 'https://example.com/data.json' });
    */
   async resolvePath(input: PathInput): Promise<ResolvedPath<R>> {
-    const raw = await this._resolve(input.path);
+    const resolved = await this._resolve(input.path);
+    const raw      = this._transform
+      ? await this._transform(resolved, input.path)
+      : resolved;
     return { raw, path: input.path };
   }
 
