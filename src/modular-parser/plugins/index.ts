@@ -11,9 +11,10 @@
  * to this file needed.
  */
 
-import { DataParser } from "../DataParser.js";
-import { type PluginConfig } from "./types.js";
+import { DataParser } from "../DataParser.ts";
+import { type PluginConfig } from "./types.ts";
 import loadPlugins from "./load.ts";
+
 // ---------------------------------------------------------------------------
 // loadPlugins
 // ---------------------------------------------------------------------------
@@ -22,4 +23,7 @@ import loadPlugins from "./load.ts";
 // Re-export types so callers only need to import from 'plugins/index.js'
 // ---------------------------------------------------------------------------
 
-export type { PluginConfig } from "./types.js";
+/*  esm-parser for Airtable would need a wrapper */
+const plugins = await loadPlugins(["json-parser", "mjs-parser"]);
+
+export { DataParser, loadPlugins, plugins };
