@@ -1,7 +1,4 @@
-import {
-	type ResolveFn,
-	type TransformFn,
-} from "../../PathResolver.ts";
+import { type ResolveFn, type TransformFn } from "../../PathResolver.ts";
 import { type PathResolverConfig } from "../types.ts";
 
 export class UrlResolver<R = string> implements PathResolverConfig<R> {
@@ -32,8 +29,11 @@ export function urlResolver<R = string>(
 	return new UrlResolver(name, resolve, transform, init);
 }
 
-export default new UrlResolver(
-	"urlResolver",
-	type:'pathResolver',
-	instance: async (url) => fetch(url).then((r) => r.text()),
+const RESOLVER = new UrlResolver("urlResolver", async (url) =>
+	fetch(url).then((r) => r.text()),
 );
+
+export default {
+	instance: RESOLVER,
+	init: (name, res, tra) => new UrlResolver(name, res, tra),
+};
