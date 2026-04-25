@@ -1,0 +1,97 @@
+/**
+ * example-esm-plugin.ts
+ *
+ * Plugin: fetch a remote URL, treat the response body as ESM source code,
+ * and return the live module namespace.
+ *
+ * Useful for dynamic plugin loading over HTTP in environments that allow
+ * data: URL imports (modern browsers, Deno, some Node flags).
+ */
+
+import { DataParser }   from './DataParser.ts';
+import { PathResolver } from './PathResolver.ts';
+import { parseRaw }     from './parseRawData.ts';
+
+// ---------------------------------------------------------------------------
+// 1. PathResolver — wraps fetch, carries the raw Response object through
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolves a URL to its raw fetch Response.
+ * We keep the full Response so the DataParser can inspect headers (MIME type)
+ * before deciding how to parse the body.
+ */
+export const urlResolver = new PathResolver<Response>(
+  'urlResolver',
+  (url) => fetch(url)
+);
+
+// ---------------------------------------------------------------------------
+// 2. DataParser — turns an ESM text response into a live module namespace
+// ---------------------------------------------------------------------------
+
+/**
+ * Converts the raw text of an ES module into a live module namespace via a
+ * base64 data: URL import. Works wherever dynamic import() + data: URLs are
+ * supported.
+ */
+async function importEsmFromText(raw: string | number[] | unknown[]): Promise<unknown> {
+  const source = raw as string;
+  const b64    = btoa(unescape(encodeURIComponent(source)));
+  return import(`data:application/javascript;base64,${b64}`);
+}
+
+export const esmParser = new DataParser(importEsmFromText, {
+  name: 'esmParser',
+  supports: {
+    extensions: ['js', 'mjs', 'ts'],
+    mimeTypes:  [
+      'application/javascript',
+      'text/javascript',
+      'application/x-typescript',
+    ],
+  },
+});
+
+// ---------------------------------------------------------------------------
+// 3. Putting it together — fetch → detect MIME → parse
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches `url`, reads its Content-Type, finds a matching DataParser from the
+ * registry, and returns the parsed result.
+ *
+ * Falls back to plain text when no parser is registered for the MIME type.
+ */
+export async function fetchAndParse(url: string): Promise<unknown> {
+  const { raw: response, path } = await urlResolver.resolvePath({ path: url });
+
+  if (!response.ok) {
+    throw new Error(`fetchAndParse: HTTP ${response.status} for ${path}`);
+  }
+
+  const mimeType  = (response.headers.get('content-type') ?? '').split(';')[0].trim();
+  const parser    = DataParser.find(mimeType);
+
+  if (!parser) {
+    // No registered parser — just return raw text
+    return response.text();
+  }
+
+  const bodyText = await response.text();
+  return parseRaw(bodyText, parser.parser);
+}
+
+// ---------------------------------------------------------------------------
+// Usage
+// ---------------------------------------------------------------------------
+
+/*
+  const myModule = await fetchAndParse('https://example.com/utils.mjs');
+  // → live ESM namespace, e.g. { default: ..., someExport: ... }
+
+  // Or, skip fetchAndParse and use the pieces directly:
+  const { raw: res } = await urlResolver.resolvePath({ path: 'https://example.com/utils.mjs' });
+  const text         = await res.text();
+  const mod          = await parseRaw(text, esmParser.parser);
+*/

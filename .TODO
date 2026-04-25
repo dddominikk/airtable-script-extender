@@ -1,0 +1,6 @@
+
+{
+    id, name, metadata: { table: { id, name } },  /* nonenumerable object, similar to current cells */ __cellData: { }, /** should also have nonenumerable keys for each field id that resolve to the same, case-insensitive */
+    cells: Record < fieldname, { value, string, data } >   }
+
+for cells with special processing / loading, like lets say attachments, have the package define a "metadata" prop
