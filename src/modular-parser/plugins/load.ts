@@ -1,58 +1,94 @@
 /**
- * plugins/index.ts
+ * plugins/load.ts
  *
- * Barrel that turns plugin folder names into ready-to-use DataParser instances.
+ * Turns typed plugin entries into ready-to-use instances.
  *
  * Usage:
- *   const plugins = await loadPlugins(['json-parser', 'esm-parser']);
+ *   const loaded = await loadPlugins([
+ *     { type: 'parser',       name: 'json-parser' },
+ *     { type: 'pathResolver', name: 'my-resolver' },
+ *     { type: 'custom',       name: 'my-plugin'   },
+ *   ]);
  *
  * Each name must correspond to a folder under plugins/ that exports a default
- * PluginConfig object.  New plugins are picked up automatically — no changes
- * to this file needed.
+ * object matching the contract for its type.  New plugins are picked up
+ * automatically — no changes to this file needed.
  */
 
-import { DataParser }        from '../DataParser.ts';
-import { type PluginConfig } from './types.ts';
+import { DataParser }    from '../DataParser.ts';
+import { PathResolver }  from '../PathResolver.ts';
+import {
+  type PluginConfig,
+  type PathResolverConfig,
+  type PluginEntry,
+  type LoadedPlugin,
+} from './types.ts';
 
 // ---------------------------------------------------------------------------
 // loadPlugins
 // ---------------------------------------------------------------------------
 
 /**
- * Dynamically imports each named plugin, wraps it in a DataParser, registers
- * it in DataParser.s, and returns the array.
+ * Dynamically imports each plugin entry and constructs the appropriate
+ * instance based on the entry's `type`:
  *
- * The DataParser name is taken from the parser function's `.name` property
- * when available, falling back to the folder name.
+ * - `'parser'`       → `DataParser`   (registered in `DataParser.s`)
+ * - `'pathResolver'` → `PathResolver`
+ * - `'custom'`       → raw default export passed through as-is
  *
- * @param names - Folder names under `plugins/`, e.g. `['json-parser', 'esm-parser']`
+ * @param entries - Array of `{ type, name }` descriptors.
  *
  * @example
- * const plugins = await loadPlugins(['json-parser', 'esm-parser']);
- * // plugins[0] === DataParser.s['jsonParser']
- * // plugins[1] === DataParser.s['esmParser']
+ * const loaded = await loadPlugins([
+ *   { type: 'parser',       name: 'json-parser' },
+ *   { type: 'pathResolver', name: 'fetch-resolver' },
+ * ]);
+ *
+ * for (const p of loaded) {
+ *   if (p.type === 'parser')       console.log(p.instance.name);   // DataParser
+ *   if (p.type === 'pathResolver') console.log(p.instance.name);   // PathResolver
+ *   if (p.type === 'custom')       console.log(p.instance);        // raw export
+ * }
  */
-export async function loadPlugins(names: string[]): Promise<DataParser[]> {
-  const entries = await Promise.all(
-    names.map(async (folderName) => {
-      const mod    = await import(`./${folderName}/index.ts`);
-      const config = mod.default as PluginConfig;
-      return { folderName, config };
-    })
-  );
+export async function loadPlugins(entries: PluginEntry[]): Promise<LoadedPlugin[]> {
+  return Promise.all(
+    entries.map(async (entry): Promise<LoadedPlugin> => {
+      const mod = await import(`./${entry.name}/index.ts`);
 
-  return entries.map(({ folderName, config }) =>
-    new DataParser(config.parser, {
-      // Named function → use its own name; anonymous → fall back to folder name.
-      name:     config.parser.name || folderName,
-      supports: config.supports,
+      switch (entry.type) {
+        case 'parser': {
+          const config = mod.default as PluginConfig;
+          return {
+            type:     'parser',
+            instance: new DataParser(config.parser, {
+              name:     config.parser.name || entry.name,
+              supports: config.supports,
+            }),
+          };
+        }
+
+        case 'pathResolver': {
+          const config = mod.default as PathResolverConfig;
+          return {
+            type:     'pathResolver',
+            instance: new PathResolver(config.name, config.resolve, config.transform),
+          };
+        }
+
+        case 'custom': {
+          return {
+            type:     'custom',
+            instance: mod.default as Record<string, unknown>,
+          };
+        }
+      }
     })
   );
 }
 
 // ---------------------------------------------------------------------------
-// Re-export types so callers only need to import from 'plugins/index.ts'
+// Re-export types so callers only need to import from 'plugins/load.ts'
 // ---------------------------------------------------------------------------
 
-export type { PluginConfig } from './types.ts';
+export type { PluginConfig, PathResolverConfig, PluginEntry, LoadedPlugin } from './types.ts';
 export default loadPlugins;
