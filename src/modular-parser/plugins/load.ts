@@ -35,7 +35,7 @@ import { type PluginConfig } from './types.ts';
 export async function loadPlugins(names: string[]): Promise<DataParser[]> {
   const entries = await Promise.all(
     names.map(async (folderName) => {
-      const mod    = await import(`./${folderName}/index.js`);
+      const mod    = await import(`./${folderName}/index.ts`);
       const config = mod.default as PluginConfig;
       return { folderName, config };
     })
@@ -51,7 +51,7 @@ export async function loadPlugins(names: string[]): Promise<DataParser[]> {
 }
 
 // ---------------------------------------------------------------------------
-// Re-export types so callers only need to import from 'plugins/index.js'
+// Re-export types so callers only need to import from 'plugins/index.ts'
 // ---------------------------------------------------------------------------
 
 export type { PluginConfig } from './types.ts';
