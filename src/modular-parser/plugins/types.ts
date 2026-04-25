@@ -37,15 +37,15 @@ export interface PathResolverConfig<R = string> {
 // ---------------------------------------------------------------------------
 
 export type PluginEntry =
-  | { type: 'parser';       name: string }
-  | { type: 'pathResolver'; name: string }
-  | { type: 'custom';       name: string };
+  | { type: 'parser';       dir: string; name?: string }
+  | { type: 'pathResolver'; dir: string; name?: string }
+  | { type: 'custom';       dir: string; name?: string };
 
 // ---------------------------------------------------------------------------
 // Loaded plugin (output) — discriminated union
 // ---------------------------------------------------------------------------
 
 export type LoadedPlugin =
-  | { type: 'parser';       instance: DataParser }
-  | { type: 'pathResolver'; instance: PathResolver }
-  | { type: 'custom';       instance: Record<string, unknown> };
+  | { type: 'parser';       name: string; instance: DataParser }
+  | { type: 'pathResolver'; name: string; instance: PathResolver }
+  | { type: 'custom';       name: string; instance: Record<string, unknown> };

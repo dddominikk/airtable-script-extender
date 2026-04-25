@@ -53,15 +53,17 @@ import {
 export async function loadPlugins(entries: PluginEntry[]): Promise<LoadedPlugin[]> {
   return Promise.all(
     entries.map(async (entry): Promise<LoadedPlugin> => {
-      const mod = await import(`./${entry.name}/index.ts`);
+      const key = entry.name ?? entry.dir;
+      const mod = await import(`./${entry.dir}/index.ts`);
 
       switch (entry.type) {
         case 'parser': {
           const config = mod.default as PluginConfig;
           return {
             type:     'parser',
+            name:     key,
             instance: new DataParser(config.parser, {
-              name:     config.parser.name || entry.name,
+              name:     config.parser.name || key,
               supports: config.supports,
             }),
           };
@@ -71,6 +73,7 @@ export async function loadPlugins(entries: PluginEntry[]): Promise<LoadedPlugin[
           const config = mod.default as PathResolverConfig;
           return {
             type:     'pathResolver',
+            name:     key,
             instance: new PathResolver(config.name, config.resolve, config.transform),
           };
         }
@@ -78,6 +81,7 @@ export async function loadPlugins(entries: PluginEntry[]): Promise<LoadedPlugin[
         case 'custom': {
           return {
             type:     'custom',
+            name:     key,
             instance: mod.default as Record<string, unknown>,
           };
         }

@@ -11,24 +11,15 @@
  * to this file needed.
  */
 
-import { DataParser } from "../DataParser.ts";
-import { type PluginConfig } from "./types.ts";
-import loadPlugins from "./load.ts";
+import { DataParser }  from "../DataParser.ts";
+import loadPlugins    from "./load.ts";
 
-// ---------------------------------------------------------------------------
-// loadPlugins
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Re-export types so callers only need to import from 'plugins/index.js'
-// ---------------------------------------------------------------------------
-
-/*  esm-parser for Airtable would need a wrapper */
 const plugins = await loadPlugins([
-	{ type: "parser", name: "json-parser" },
-	{ type: "parser", name: "mjs-parser" },
-	{ type: "pathResolver", name: "url-resolver" },
+	{ type: "parser",       dir: "json-parser" },
+	{ type: "parser",       dir: "mjs-parser"  },
+	{ type: "pathResolver", dir: "url-resolver" },
 ]);
 
+const pluginMap = Object.fromEntries(plugins.map((p) => [p.name, p.instance]));
 
-export { DataParser, loadPlugins, plugins };
+export { DataParser, loadPlugins, plugins, pluginMap };
